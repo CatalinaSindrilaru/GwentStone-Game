@@ -1,6 +1,7 @@
 package game.data;
 
 import fileio.CardInput;
+import game.card.hero.Hero;
 
 import java.util.ArrayList;
 
@@ -18,7 +19,13 @@ public class CardInputData {
     public CardInputData(CardInput card) {
         this.mana = card.getMana();
         this.attackDamage = card.getAttackDamage();
-        this.health = card.getHealth();
+
+        Hero hero = new Hero();
+        if (hero.getHeroCards().contains(card.getName())) {
+            this.health = 30;
+        } else {
+            this.health = card.getHealth();
+        }
         this.description = new String(card.getDescription());
         this.colors.addAll(card.getColors());
         this.name = new String(card.getName());

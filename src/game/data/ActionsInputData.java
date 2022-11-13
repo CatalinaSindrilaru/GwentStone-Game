@@ -18,8 +18,14 @@ public class ActionsInputData {
     public ActionsInputData(ActionsInput action) {
         this.command = new String(action.getCommand());
         this.handIdx = action.getHandIdx();
-        this.cardAttacker = new CoordinatesData(action.getCardAttacker());
-        this.cardAttacked = new CoordinatesData(action.getCardAttacked());
+        if (action.getCardAttacker() != null) {
+            this.cardAttacker = new CoordinatesData(action.getCardAttacker());
+        }
+
+        if (action.getCardAttacked() != null) {
+            this.cardAttacked = new CoordinatesData(action.getCardAttacked());
+        }
+
         this.affectedRow = action.getAffectedRow();
         this.playerIdx = action.getPlayerIdx();
         this.x = action.getX();

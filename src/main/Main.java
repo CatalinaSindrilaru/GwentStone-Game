@@ -7,6 +7,7 @@ import com.fasterxml.jackson.databind.ObjectWriter;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import checker.CheckerConstants;
 import fileio.Input;
+import game.SolveCommands;
 import game.data.InputData;
 
 import java.util.*;
@@ -76,7 +77,11 @@ public final class Main {
         //TODO add here the entry point to your implementation
         InputData data = new InputData(inputData);
 
-        System.out.println(data.getPlayerOneDecks().getNrDecks());
+//        System.out.println(filePath1 + " " + data.getPlayerOneDecks().getDecks().get(0).get(0).getName());
+            SolveCommands gata = new SolveCommands();
+            gata.display(data, output);
+
+
 
         ObjectWriter objectWriter = objectMapper.writerWithDefaultPrettyPrinter();
         objectWriter.writeValue(new File(filePath2), output);
