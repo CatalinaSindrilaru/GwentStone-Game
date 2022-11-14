@@ -1,13 +1,19 @@
 package game;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
+import game.card.environment.Environment;
+import game.card.minion.Minion;
 import game.data.ActionsInputData;
 import game.data.CardInputData;
 import game.data.GameInputData;
 import game.data.InputData;
-import game.displays.DisplayGetPlayerDeck;
+import game.displays.DisplayDeck;
+import game.displays.DisplayError;
 import game.displays.DisplayGetPlayerHero;
 import game.displays.DisplayGetPlayerTurn;
+import game.gameStrategy.Game;
 import game.gameStrategy.Player;
 
 import java.util.ArrayList;
@@ -15,7 +21,7 @@ import java.util.Collections;
 import java.util.Random;
 
 public class SolveCommands {
-    public void display(InputData inputData, ArrayNode output) {
+    public void display(String file, InputData inputData, ArrayNode output) {
 
         ArrayList<GameInputData> games = inputData.getGames();
 
@@ -32,66 +38,58 @@ public class SolveCommands {
             Collections.shuffle(playerOneDeck, new Random(game.getStartGame().getShuffleSeed()));
             Collections.shuffle(playerTwoDeck, new Random(game.getStartGame().getShuffleSeed()));
 
-            // scot carte
-
-            // sterg prima carte din game si o oun in mana
-            // runda = 1
-            // tura = 1
-
-            // mana pt jucator = 1
-            // masa goala la inceput de joc
-
             Player player1 = new Player();
             Player player2 = new Player();
 
+            // scot carte
+
+            // sterg prima carte din game si o oun in mana
+
             player1.getHand().add(playerOneDeck.remove(0));
             player2.getHand().add(playerTwoDeck.remove(0));
+
+            // creez o masa noua la fiecare joc nou. incep o noua tura/runda si schimb jucatorul la starting player
+            Game currentGame = new Game();
+            currentGame.newGame();
+            currentGame.changePlayer(game.getStartGame().getStartingPlayer());
+            player1.setMana(1);  // mana pt jucator = 1
+            player2.setMana(1);
 
 
             for (ActionsInputData action : actions) {
                 String command = new String(action.getCommand());
 
-//                if (command.compareTo("getCardsInHand") == 0) {
-//                    //todo
-//                } else
-                if (command.compareTo("getPlayerDeck") == 0) {
+                if (command.compareTo("getCardsInHand") == 0) {
+                    getCardsInHand(action.getPlayerIdx(), player1, player2, output);
+                }
 
+                if (command.compareTo("getPlayerDeck") == 0) {
                     getPlayerDeck(inputData, game, action, output);
-                    // functie afisare carti
-//                    System.out.println(file);
-//                    for (CardInputData card : deck) {
-//                        System.out.println(card.getDescription());
-//                    }
                 }
-//                } else if (command.compareTo("getCardsOnTable") == 0) {
-//                    //todo
-//                } else
+
                 if (command.compareTo("getPlayerTurn") == 0) {
-                    //todo
-                    getPlayerTurn(game, output);
-//                    System.out.println(file);
-//                    System.out.println(getPlayerTurn(game));
+                    getPlayerTurn(currentGame, output);
                 }
-//                } else
+
                 if (command.compareTo("getPlayerHero") == 0) {
-                    //todo
                     getPlayerHero(game, action, output);
-//                    System.out.println(file);
-//                    System.out.println(card.getName());
                 }
-//                } else if (command.compareTo("getCardAtPosition") == 0) {
-//                    //todo
-//                } else if (command.compareTo("getPlayerMana") == 0) {
-//                    //todo
-//                } else if (command.compareTo("getEnvironmentCardsInHand") == 0) {
-//                    //todo
-//                } else if (command.compareTo("getFrozenCardsOnTable") == 0) {
-//                    //todo
-//                }
+
+                if (command.compareTo("endPlayerTurn") == 0) {
+                    endPlayerTurn(currentGame, player1, player2, playerOneDeck, playerTwoDeck);
+                }
+
+                if  (command.compareTo(("placeCard")) == 0) {
+                    int handIdx = action.getHandIdx();
+                    placeCard(currentGame, handIdx, player1, player2, output);
+                }
+
+                if (command.compareTo("getPlayerMana") == 0) {
+                    int playerIdx = action.getPlayerIdx();
+                    getPlayerMana(playerIdx, player1, player2, output);
+                }
             }
         }
-
-
 
     }
 
@@ -109,23 +107,15 @@ public class SolveCommands {
         if (playerIdx == 1) {
             decks = inputData.getPlayerOneDecks().getDecks();
             playerDeckIdx = game.getStartGame().getPlayerOneDeckIdx();
-//            return decks.get(playerDeckIdx);
-            DisplayGetPlayerDeck displayGetPlayerDeck = new DisplayGetPlayerDeck();
-            displayGetPlayerDeck.displayGetPlayerDeck(decks.get(playerDeckIdx), playerIdx, output);
+            DisplayDeck displayGetPlayerDeck = new DisplayDeck();
+            displayGetPlayerDeck.displayDeck(decks.get(playerDeckIdx), playerIdx, output, "getPlayerDeck");
 
         } else if (playerIdx == 2) {
             decks = inputData.getPlayerTwoDecks().getDecks();
             playerDeckIdx = game.getStartGame().getPlayerTwoDeckIdx();
-//            return decks.get(playerDeckIdx);
-            DisplayGetPlayerDeck displayGetPlayerDeck = new DisplayGetPlayerDeck();
-            displayGetPlayerDeck.displayGetPlayerDeck(decks.get(playerDeckIdx), playerIdx, output);
+            DisplayDeck displayGetPlayerDeck = new DisplayDeck();
+            displayGetPlayerDeck.displayDeck(decks.get(playerDeckIdx), playerIdx, output, "getPlayerDeck");
         }
-
-        // apelare display -- command, playerIdx, decks.get(playerDeckIdx)
-//        DisplayGetPlayerDeck displayGetPlayerDeck = new DisplayGetPlayerDeck();
-//        displayGetPlayerDeck.displayGetPlayerDeck(decks.get(playerDeckIdx), playerIdx, output);
-        // adaugare neapaart in output
-//        return null;
     }
 
     public void getPlayerHero(GameInputData game, ActionsInputData action, ArrayNode output) {
@@ -134,7 +124,6 @@ public class SolveCommands {
         CardInputData hero;
         if (playerIdx == 1) {
             hero = game.getStartGame().getPlayerOneHero();
-            //
             DisplayGetPlayerHero displayGetPlayerHero = new DisplayGetPlayerHero();
             displayGetPlayerHero.displayGetPlayerHero(hero, playerIdx, output);
 
@@ -147,11 +136,143 @@ public class SolveCommands {
     }
 
     //merge doar pt test1
-    public void getPlayerTurn(GameInputData game, ArrayNode output) {
+    public void getPlayerTurn(Game currentGame, ArrayNode output) {
         int playerTurn;
-        playerTurn = game.getStartGame().getStartingPlayer();
+//        playerTurn = game.getStartGame().getStartingPlayer();
+        playerTurn = currentGame.getCurrentPlayer();
 
         DisplayGetPlayerTurn displayGetPlayerTurn = new DisplayGetPlayerTurn();
         displayGetPlayerTurn.displayGetPlayerTurn(playerTurn, output);
     }
+
+    public void endPlayerTurn(Game currentGame, Player player1, Player player2,  ArrayList<CardInputData> playerOneDeck, ArrayList<CardInputData> playerTwoDeck) {
+        currentGame.increaseTour();
+        if (currentGame.getTour() % 2 == 1) {
+            currentGame.increaseRound();
+
+            player1.changeManaPlayer(currentGame.getRound());
+            player2.changeManaPlayer(currentGame.getRound());
+
+            if (playerOneDeck.size() > 0)
+                player1.getHand().add(playerOneDeck.remove(0));
+            if (playerTwoDeck.size() > 0)
+                player2.getHand().add(playerTwoDeck.remove(0));
+        }
+
+        if (currentGame.getCurrentPlayer() == 1) {
+            currentGame.changePlayer(2);
+        } else {
+            currentGame.changePlayer(1);
+        }
+    }
+
+    public void getCardsInHand(int playerIdx, Player player1, Player player2, ArrayNode output) {
+
+        if (playerIdx == 1) {
+            DisplayDeck displayGetPlayerDeck = new DisplayDeck();
+            displayGetPlayerDeck.displayDeck(player1.getHand(), playerIdx, output, "getCardsInHand");
+        } else {
+            DisplayDeck displayGetPlayerDeck = new DisplayDeck();
+            displayGetPlayerDeck.displayDeck(player2.getHand(), playerIdx, output, "getCardsInHand");
+        }
+    }
+
+    public void placeCard(Game currentGame, int handIdx, Player player1, Player player2, ArrayNode output) {
+
+        Environment environment = new Environment();
+        Minion minion = new Minion();
+
+        Player player = player1;
+        if (currentGame.getCurrentPlayer() == 2) {
+            player = player2;
+        }
+
+        // scoate cartea de la pozitia handIdx din mana
+        ArrayList<CardInputData> hand = player.getHand();
+
+        if (hand.size() > 0 && handIdx < hand.size()) {
+            CardInputData card = hand.get(handIdx);
+            boolean done = false;
+
+            // scot tabla de jos
+            ArrayList<ArrayList<CardInputData>> table = currentGame.getTable();
+
+
+            // verifica daca cartea este de tipul environment
+            if (environment.getEnvironmentCards().contains(card.getName())) {
+                DisplayError displayError = new DisplayError();
+                displayError.displayErrorPlaceCard(output, "Cannot place environment card on table.");
+                done = true;
+
+            }
+            if (!done && card.getMana() > player.getMana()) {  // verifica daca cartea are costul mai mic decat mana jucatorului
+
+                DisplayError displayError = new DisplayError();
+                displayError.displayErrorPlaceCard(output, "Not enough mana to place card on table.");
+                done = true;
+
+            }
+
+            if (!done && player == player1) {      // se verifica daca randul pe care trebuie plasata cartea este plin
+                if ((minion.getMinionNormalCards().contains(card.getName()) && table.get(3).size() == 5) ||
+                        (minion.getMinionSpecialCards().contains(card.getName()) && table.get(2).size() == 5)) {
+                    DisplayError displayError = new DisplayError();
+                    displayError.displayErrorPlaceCard(output, "Cannot place card on table since row is full.");
+                    done = true;
+                }
+            }
+            if (!done && player == player2) {
+                if ((minion.getMinionNormalCards().contains(card.getName()) && table.get(0).size() == 5) ||
+                        (minion.getMinionSpecialCards().contains(card.getName()) && table.get(1).size() == 5)) {
+                    DisplayError displayError = new DisplayError();
+                    displayError.displayErrorPlaceCard(output, "Cannot place card on table since row is full.");
+                    done = true;
+                }
+            }
+
+            // altfel plaseaza cartea
+            //PLACE CARD PROPRIU-ZIS
+            // STERG CARTEA DIN HAND-UL playerului si o pun pe randul potrivit
+            if (!done) {
+                if (player == player1) {
+                    if (minion.getMinionNormalCards().contains(card.getName())) {
+                        ArrayList<CardInputData> row = table.get(3);
+                        row.add(hand.remove(handIdx));
+                    } else {
+                        ArrayList<CardInputData> row = table.get(2);
+                        row.add(hand.remove(handIdx));
+                    }
+                    player1.changeManaPlayer(-card.getMana());
+                } else {
+                    if (minion.getMinionNormalCards().contains(card.getName())) {
+                        ArrayList<CardInputData> row = table.get(0);
+                        row.add(hand.remove(handIdx));
+                    } else {
+                        ArrayList<CardInputData> row = table.get(1);
+                        row.add(hand.remove(handIdx));
+                    }
+                    player2.changeManaPlayer(-card.getMana());
+                }
+            }
+        }
+
+
+    }
+
+    public void getPlayerMana(int playerIdx, Player player1, Player player2, ArrayNode output) {
+        int playerMana = player1.getMana();
+
+        if (playerIdx == 2) {
+            playerMana = player2.getMana();
+        }
+        ObjectMapper mapper = new ObjectMapper();
+        ObjectNode outputCommand = mapper.createObjectNode();
+
+        outputCommand.put("command", "getPlayerMana");
+        outputCommand.put("playerIdx", playerIdx);
+        outputCommand.put("output", playerMana);
+
+        output.add(outputCommand);
+    }
+
 }

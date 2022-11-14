@@ -6,20 +6,24 @@ import java.util.ArrayList;
 
 public class Minion extends CardInputData {
     //TODO
-    private ArrayList<String> minionCards = new ArrayList<>();
+    private ArrayList<String> minionNormalCards = new ArrayList<>();
+    private ArrayList<String> minionSpecialCards = new ArrayList<>();
 
     public Minion(){
-        minionCards.add("Sentinel");
-        minionCards.add("Berserker");
-        minionCards.add("Goliath");
-        minionCards.add("Warden");
-        minionCards.add("The Ripper");
-        minionCards.add("Miraj");
-        minionCards.add("The Cursed One");
-        minionCards.add("Disciple");
+        minionNormalCards.add("Sentinel");
+        minionNormalCards.add("Berserker");
+        minionNormalCards.add("Goliath");
+        minionNormalCards.add("Warden");
+        minionSpecialCards.add("The Ripper");
+        minionSpecialCards.add("Miraj");
+        minionSpecialCards.add("The Cursed One");
+        minionSpecialCards.add("Disciple");
     }
 
-    public ArrayList<String> getMinionCards() {
-        return minionCards;
+    public ArrayList<String> getMinionNormalCards() {
+        return minionNormalCards;
+    }
+    public ArrayList<String> getMinionSpecialCards() {
+        return minionSpecialCards;
     }
 }

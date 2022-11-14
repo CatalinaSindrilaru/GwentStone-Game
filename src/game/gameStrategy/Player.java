@@ -8,9 +8,9 @@ import java.util.ArrayList;
 public class Player {
 
     private ArrayList<CardInputData> hand = new ArrayList<>();
-    private static int mana;
-    private static int totalGames;
-    private static int WinnedGames;
+    private int mana;
+    private int totalGames;
+    private int WinnedGames;
 
     public ArrayList<CardInputData> getHand() {
         return hand;
@@ -20,27 +20,31 @@ public class Player {
         this.hand = hand;
     }
 
-    public static int getMana() {
+    public void changeManaPlayer(int value) {
+        mana += value;
+    }
+
+    public int getMana() {
         return mana;
     }
 
-    public static void setMana(int mana) {
-        Player.mana = mana;
+    public void setMana(int mana) {
+        this.mana = mana;
     }
 
-    public static int getTotalGames() {
+    public int getTotalGames() {
         return totalGames;
     }
 
-    public static void setTotalGames(int totalGames) {
-        Player.totalGames = totalGames;
+    public void setTotalGames(int totalGames) {
+        this.totalGames = totalGames;
     }
 
-    public static int getWinnedGames() {
+    public int getWinnedGames() {
         return WinnedGames;
     }
 
-    public static void setWinnedGames(int winnedGames) {
+    public void setWinnedGames(int winnedGames) {
         WinnedGames = winnedGames;
     }
 }

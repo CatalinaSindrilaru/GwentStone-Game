@@ -78,9 +78,14 @@ public final class Main {
         InputData data = new InputData(inputData);
 
 //        System.out.println(filePath1 + " " + data.getPlayerOneDecks().getDecks().get(0).get(0).getName());
-            SolveCommands gata = new SolveCommands();
-            gata.display(data, output);
+//        if (filePath1.equals("test02_place_card.json")) {
+//            InputData data = new InputData(inputData);
+//            SolveCommands gata = new SolveCommands();
+//            gata.display(filePath1, data, output);
+//        }
 
+            SolveCommands gata = new SolveCommands();
+            gata.display(filePath1, data, output);
 
 
         ObjectWriter objectWriter = objectMapper.writerWithDefaultPrettyPrinter();

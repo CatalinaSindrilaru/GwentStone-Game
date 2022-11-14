@@ -5,17 +5,16 @@ import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import game.data.CardInputData;
 
-import java.text.Normalizer;
 import java.util.ArrayList;
 
-public class DisplayGetPlayerDeck {
+public class DisplayDeck {
 
-    public void displayGetPlayerDeck(ArrayList<CardInputData> deck, int playerIdx, ArrayNode output) {
+    public void displayDeck(ArrayList<CardInputData> deck, int playerIdx, ArrayNode output, String command) {
 
         ObjectMapper mapper = new ObjectMapper();
         ObjectNode outputCommand = mapper.createObjectNode();
 
-        outputCommand.put("command", "getPlayerDeck");
+        outputCommand.put("command", command);
         outputCommand.put("playerIdx", playerIdx);
 
         FormDeck formDeck = new FormDeck();
