@@ -1,5 +1,6 @@
 package game;
 
+import com.fasterxml.jackson.core.ObjectCodec;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
@@ -9,10 +10,7 @@ import game.data.ActionsInputData;
 import game.data.CardInputData;
 import game.data.GameInputData;
 import game.data.InputData;
-import game.displays.DisplayDeck;
-import game.displays.DisplayError;
-import game.displays.DisplayGetPlayerHero;
-import game.displays.DisplayGetPlayerTurn;
+import game.displays.*;
 import game.gameStrategy.Game;
 import game.gameStrategy.Player;
 
@@ -88,6 +86,27 @@ public class SolveCommands {
                     int playerIdx = action.getPlayerIdx();
                     getPlayerMana(playerIdx, player1, player2, output);
                 }
+
+                if (command.compareTo("getCardsOnTable") == 0) {
+                    getCardsOnTable(currentGame, output);
+                }
+
+                if (command.compareTo("getEnvironmentCardsInHand") == 0) {
+                    int playerIdx = action.getPlayerIdx();
+                    getEnvironmentCardsInHand(playerIdx, player1, player2, output);
+                }
+
+                if (command.compareTo("getCardAtPosition") == 0) {
+                    int x = action.getX();
+                    int y = action.getY();
+                    getCardAtPosition(currentGame, x, y, output);
+                }
+
+                if (command.compareTo("useEnvironmentCard") == 0) {
+                    int handIdx = action.getHandIdx();
+                    int affectedRow = action.getAffectedRow();
+                    useEnvironmentCard(currentGame, player1, player2, handIdx, affectedRow, output);
+                }
             }
         }
 
@@ -107,6 +126,7 @@ public class SolveCommands {
         if (playerIdx == 1) {
             decks = inputData.getPlayerOneDecks().getDecks();
             playerDeckIdx = game.getStartGame().getPlayerOneDeckIdx();
+
             DisplayDeck displayGetPlayerDeck = new DisplayDeck();
             displayGetPlayerDeck.displayDeck(decks.get(playerDeckIdx), playerIdx, output, "getPlayerDeck");
 
@@ -214,16 +234,18 @@ public class SolveCommands {
             }
 
             if (!done && player == player1) {      // se verifica daca randul pe care trebuie plasata cartea este plin
-                if ((minion.getMinionNormalCards().contains(card.getName()) && table.get(3).size() == 5) ||
-                        (minion.getMinionSpecialCards().contains(card.getName()) && table.get(2).size() == 5)) {
+
+                if ((minion.getBackCards().contains(card.getName()) && table.get(3).size() == 5) ||
+                        (minion.getFrontCards().contains(card.getName()) && table.get(2).size() == 5)) {
+
                     DisplayError displayError = new DisplayError();
                     displayError.displayErrorPlaceCard(output, "Cannot place card on table since row is full.");
                     done = true;
                 }
             }
             if (!done && player == player2) {
-                if ((minion.getMinionNormalCards().contains(card.getName()) && table.get(0).size() == 5) ||
-                        (minion.getMinionSpecialCards().contains(card.getName()) && table.get(1).size() == 5)) {
+                if ((minion.getBackCards().contains(card.getName()) && table.get(0).size() == 5) ||
+                        (minion.getFrontCards().contains(card.getName()) && table.get(1).size() == 5)) {
                     DisplayError displayError = new DisplayError();
                     displayError.displayErrorPlaceCard(output, "Cannot place card on table since row is full.");
                     done = true;
@@ -235,7 +257,7 @@ public class SolveCommands {
             // STERG CARTEA DIN HAND-UL playerului si o pun pe randul potrivit
             if (!done) {
                 if (player == player1) {
-                    if (minion.getMinionNormalCards().contains(card.getName())) {
+                    if (minion.getBackCards().contains(card.getName())) {
                         ArrayList<CardInputData> row = table.get(3);
                         row.add(hand.remove(handIdx));
                     } else {
@@ -243,8 +265,9 @@ public class SolveCommands {
                         row.add(hand.remove(handIdx));
                     }
                     player1.changeManaPlayer(-card.getMana());
+
                 } else {
-                    if (minion.getMinionNormalCards().contains(card.getName())) {
+                    if (minion.getBackCards().contains(card.getName())) {
                         ArrayList<CardInputData> row = table.get(0);
                         row.add(hand.remove(handIdx));
                     } else {
@@ -275,4 +298,165 @@ public class SolveCommands {
         output.add(outputCommand);
     }
 
+    public void getCardsOnTable(Game currentGame, ArrayNode output) {
+
+        ArrayList<ArrayList<CardInputData>> table = currentGame.getTable();
+
+        ObjectMapper mapper = new ObjectMapper();
+        ArrayNode cardsOnTable = mapper.createArrayNode();
+
+        for (int i = 0; i < 4; i++) {
+            ArrayList<CardInputData> row = table.get(i);
+
+            FormDeck formDeck = new FormDeck();
+            ArrayNode rowFormed  = formDeck.addDeckInOutput(row);
+
+            cardsOnTable.add(rowFormed);
+        }
+
+        ObjectNode outputCommand = mapper.createObjectNode();
+
+        outputCommand.put("command", "getCardsOnTable");
+        outputCommand.set("output", cardsOnTable);
+
+        output.add(outputCommand);
+    }
+
+    public void getEnvironmentCardsInHand(int playerIdx, Player player1, Player player2, ArrayNode output) {
+
+        Player player = player1;
+        if (playerIdx == 2) {
+            player = player2;
+        }
+
+        ArrayList<CardInputData> hand = player.getHand();
+
+        Environment environment = new Environment();
+
+
+        ObjectMapper mapper = new ObjectMapper();
+        ArrayNode environmentCards = mapper.createArrayNode();
+
+        for (CardInputData card : hand) {
+
+            if (environment.getEnvironmentCards().contains(card.getName())) {
+                FormCard displayCard = new FormCard();
+                ObjectNode environmentCard = displayCard.addCardInOutput(card);
+
+                environmentCards.add(environmentCard);
+            }
+        }
+
+        ObjectNode outputCommand = mapper.createObjectNode();
+
+        outputCommand.put("command", "getEnvironmentCardsInHand");
+        outputCommand.put("playerIdx", playerIdx);
+        outputCommand.set("output", environmentCards);
+
+        output.add(outputCommand);
+    }
+
+    public void getCardAtPosition(Game currentGame, int x, int y, ArrayNode output) {
+
+        ObjectMapper mapper = new ObjectMapper();
+        ObjectNode outputCommand = mapper.createObjectNode();
+
+        outputCommand.put("command", "getCardAtPosition");
+        outputCommand.put("x", x);
+        outputCommand.put("y", y);
+
+        ArrayList<ArrayList<CardInputData>> table = currentGame.getTable();
+
+        ArrayList<CardInputData> row = table.get(x);
+
+        if (y >= row.size()) {
+            outputCommand.put("output", "No card at that position.");
+
+        } else {
+            FormCard displayCard = new FormCard();
+            ObjectNode card = displayCard.addCardInOutput(row.get(y));
+
+            outputCommand.set("output", card);
+        }
+
+        output.add(outputCommand);
+    }
+
+    public void useEnvironmentCard(Game currentGame, Player player1, Player player2, int handIdx, int affectedRow, ArrayNode output) {
+
+        ArrayList<ArrayList<CardInputData>> table = currentGame.getTable();
+        Player player = player1;
+        if (currentGame.getCurrentPlayer() == 2) {
+            player = player2;
+        }
+
+        ArrayList<CardInputData> hand = player.getHand();
+
+        CardInputData card = hand.get(handIdx);
+
+        Environment environment = new Environment();
+        boolean done = false;
+
+        if (!environment.getEnvironmentCards().contains(card.getName())) {  // daca indexul ales NU corespunde unei cărți de tipul environment în lista de cărți din mână,
+            DisplayError displayError = new DisplayError();
+            displayError.displayErrorUseEnvironmentCard(output, handIdx, affectedRow, "Chosen card is not of type environment.");
+            done = true;
+        }
+
+        if (!done && card.getMana() > player.getMana()) {
+            DisplayError displayError = new DisplayError();
+            displayError.displayErrorUseEnvironmentCard(output, handIdx, affectedRow, "Not enough mana to use environment card.");
+            done = true;
+        }
+
+        // pot combina if-urile acestea doua intr-unul singur
+        if (!done && player == player1) {
+            if (affectedRow == 2 || affectedRow == 3) {
+                DisplayError displayError = new DisplayError();
+                displayError.displayErrorUseEnvironmentCard(output, handIdx, affectedRow, "Chosen row does not belong to the enemy.");
+                done = true;
+            }
+        }
+
+        if (!done && player == player2) {
+            if (affectedRow == 0 || affectedRow == 1) {
+                DisplayError displayError = new DisplayError();
+                displayError.displayErrorUseEnvironmentCard(output, handIdx, affectedRow, "Chosen row does not belong to the enemy.");
+                done = true;
+            }
+        }
+
+        if (!done && card.getName().compareTo("Heart Hound") == 0) {  // verific daca am unde sa pun jucatorul furat
+
+        }
+
+        //TODO verificare Heart hound
+        if (!done) {
+            ArrayList<CardInputData> row = table.get(affectedRow);
+            if (card.getName().compareTo("Firestorm") == 0) { // scade cu 1 viata tuturor minionilor de pe rand
+                //todo
+
+                for (int i = 0; i < row.size(); i++) {
+                    CardInputData minionCard = row.get(i);
+                    int health = minionCard.getHealth();
+                    minionCard.setHealth(health - 1);
+                    // verificare daca cartea nu mai are viata =>>>> sterge cartea din row
+                }
+
+            } else if (card.getName().compareTo("Winterfell") == 0) { // Toate cărțile de pe rând stau o tură.
+                //todo
+                for (int i = 0; i < row.size(); i++) {
+                    CardInputData minionCard = row.get(i);
+                    minionCard.setFrozen(1);
+                }
+
+            } else if (card.getName().compareTo("Heart Hound") == 0) { // Se fură minionul adversarului cu cea mai mare viață de pe rând și se pune pe rândul “oglindit” aferent jucătorului.
+                //todo
+                
+            }
+
+            // sterge card din mana
+        }
+
+    }
 }

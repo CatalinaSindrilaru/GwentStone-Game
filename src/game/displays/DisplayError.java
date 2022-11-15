@@ -17,4 +17,17 @@ public class DisplayError {
 
         output.add(outputCommand);
     }
+
+    public void displayErrorUseEnvironmentCard(ArrayNode output, int handIdx, int row, String errorMessage) {
+
+        ObjectMapper mapper = new ObjectMapper();
+        ObjectNode outputCommand = mapper.createObjectNode();
+
+        outputCommand.put("command", "useEnvironmentCard");
+        outputCommand.put("handIdx", handIdx);
+        outputCommand.put("affectedRow", row);
+        outputCommand.put("error", errorMessage);
+
+        output.add(outputCommand);
+    }
 }

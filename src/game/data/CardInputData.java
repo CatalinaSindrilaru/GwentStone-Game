@@ -13,6 +13,8 @@ public class CardInputData {
     private ArrayList<String> colors =  new ArrayList<>();
     private String name;
 
+    private int frozen; // adaugat  vreau sa fie 0 daca cartea nu e frozen si 1 daca cartea e frozen
+
     public CardInputData() {
 
     }
@@ -29,6 +31,7 @@ public class CardInputData {
         this.description = new String(card.getDescription());
         this.colors.addAll(card.getColors());
         this.name = new String(card.getName());
+        frozen = 0;
     }
 
     public int getMana() {
@@ -77,5 +80,13 @@ public class CardInputData {
 
     public void setName(String name) {
         this.name = name;
+    }
+
+    public int getFrozen() {
+        return frozen;
+    }
+
+    public void setFrozen(int frozen) {
+        this.frozen = frozen;
     }
 }
