@@ -107,6 +107,10 @@ public class SolveCommands {
                     int affectedRow = action.getAffectedRow();
                     useEnvironmentCard(currentGame, player1, player2, handIdx, affectedRow, output);
                 }
+
+                if (command.compareTo("getFrozenCardsOnTable") == 0) {
+                    getFrozenCardsOnTable(currentGame, output);
+                }
             }
         }
 
@@ -179,11 +183,29 @@ public class SolveCommands {
                 player2.getHand().add(playerTwoDeck.remove(0));
         }
 
+        ArrayList<ArrayList<CardInputData>> table = currentGame.getTable();
+
         if (currentGame.getCurrentPlayer() == 1) {
+            // sctoate frozen din carti
+            // randurile 2 si 3
+            for (int i = 2; i < 4; i++) {
+                ArrayList<CardInputData> row = table.get(i);
+                for (CardInputData card : row) {
+                    card.setFrozen(0);
+                }
+            }
             currentGame.changePlayer(2);
         } else {
+            for (int i = 0; i < 2; i++) {
+                ArrayList<CardInputData> row = table.get(i);
+                for (CardInputData card : row) {
+                    card.setFrozen(0);
+                }
+            }
             currentGame.changePlayer(1);
         }
+
+        //todo la finalul turei unui jucator cartile frozen sunt demarcate
     }
 
     public void getCardsInHand(int playerIdx, Player player1, Player player2, ArrayNode output) {
@@ -427,7 +449,12 @@ public class SolveCommands {
         }
 
         if (!done && card.getName().compareTo("Heart Hound") == 0) {  // verific daca am unde sa pun jucatorul furat
-
+            int myRow = 3 - affectedRow;
+            if (table.get(myRow).size() == 5) {
+                DisplayError displayError = new DisplayError();
+                displayError.displayErrorUseEnvironmentCard(output, handIdx, affectedRow, "Cannot steal enemy card since the player's row is full.");
+                done = true;
+            }
         }
 
         //TODO verificare Heart hound
@@ -441,6 +468,10 @@ public class SolveCommands {
                     int health = minionCard.getHealth();
                     minionCard.setHealth(health - 1);
                     // verificare daca cartea nu mai are viata =>>>> sterge cartea din row
+                    if (minionCard.getHealth() == 0) {
+                        row.remove(i);
+                        i--;
+                    }
                 }
 
             } else if (card.getName().compareTo("Winterfell") == 0) { // Toate cărțile de pe rând stau o tură.
@@ -452,11 +483,51 @@ public class SolveCommands {
 
             } else if (card.getName().compareTo("Heart Hound") == 0) { // Se fură minionul adversarului cu cea mai mare viață de pe rând și se pune pe rândul “oglindit” aferent jucătorului.
                 //todo
-                
+
+                // scot minionul cu cea mai mare viata si il adaug in randul meu
+                int position = 0;
+                int maxHealth = Integer.MIN_VALUE;
+                for (int i = 0; i < row.size(); i++) {
+                    if (maxHealth < row.get(i).getHealth()) {
+                        maxHealth = row.get(i).getHealth();
+                        position = i;
+                    }
+                }
+                int myRow = 3 - affectedRow;
+                table.get(myRow).add(row.remove(position));
             }
 
             // sterge card din mana
+            player.changeManaPlayer(-hand.get(handIdx).getMana());
+            hand.remove(handIdx);
+
         }
 
+    }
+
+    public void getFrozenCardsOnTable(Game currentGame, ArrayNode output) {
+
+        ObjectMapper mapper = new ObjectMapper();
+        ArrayNode cardArray = mapper.createArrayNode();
+
+        ArrayList<ArrayList<CardInputData>> table = currentGame.getTable();
+        for (ArrayList<CardInputData> row : table) {
+            for (CardInputData card : row) {
+
+                if (card.getFrozen() == 1) {
+                    FormCard displayCard = new FormCard();
+                    ObjectNode formedCard= displayCard.addCardInOutput(card);
+
+                    cardArray.add(formedCard);
+                }
+            }
+        }
+
+        ObjectNode outputCommand = mapper.createObjectNode();
+
+        outputCommand.put("command", "getFrozenCardsOnTable");
+        outputCommand.set("output", cardArray);
+
+        output.add(outputCommand);
     }
 }
