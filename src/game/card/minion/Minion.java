@@ -12,6 +12,9 @@ public class Minion extends CardInputData {
     private ArrayList<String> frontCards = new ArrayList<>();
 
     private ArrayList<String> backCards = new ArrayList<>();
+
+    private ArrayList<String> tankCards = new ArrayList<>();
+
     public Minion(){
         minionNormalCards.add("Sentinel");
         minionNormalCards.add("Berserker");
@@ -33,6 +36,9 @@ public class Minion extends CardInputData {
         backCards.add("The Cursed One");
         backCards.add("Disciple");
 
+        tankCards.add("Goliath");
+        tankCards.add("Warden");
+
     }
 
     public ArrayList<String> getMinionNormalCards() {
@@ -48,5 +54,9 @@ public class Minion extends CardInputData {
 
     public ArrayList<String> getBackCards() {
         return backCards;
+    }
+
+    public ArrayList<String> getTankCards() {
+        return tankCards;
     }
 }

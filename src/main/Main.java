@@ -78,12 +78,12 @@ public final class Main {
         InputData data = new InputData(inputData);
 
 //        System.out.println(filePath1 + " " + data.getPlayerOneDecks().getDecks().get(0).get(0).getName());
-//        if (filePath1.equals("test03_place_card_invalid.json")) {
+//        if (filePath1.equals("test06_attack_card.json")) {
 //            InputData data = new InputData(inputData);
 //            SolveCommands gata = new SolveCommands();
 //            gata.display(filePath1, data, output);
 //        }
-
+//
             SolveCommands gata = new SolveCommands();
             gata.display(filePath1, data, output);
 

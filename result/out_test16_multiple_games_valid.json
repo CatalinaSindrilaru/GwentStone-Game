@@ -209,7 +209,7 @@
   "command" : "getCardAtPosition",
   "x" : 0,
   "y" : 0,
-  "output" : "No card at that position."
+  "output" : "No card available at that position."
 }, {
   "command" : "getFrozenCardsOnTable",
   "output" : [ ]

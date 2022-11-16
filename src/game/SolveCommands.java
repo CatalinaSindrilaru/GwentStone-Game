@@ -4,12 +4,10 @@ import com.fasterxml.jackson.core.ObjectCodec;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import fileio.Coordinates;
 import game.card.environment.Environment;
 import game.card.minion.Minion;
-import game.data.ActionsInputData;
-import game.data.CardInputData;
-import game.data.GameInputData;
-import game.data.InputData;
+import game.data.*;
 import game.displays.*;
 import game.gameStrategy.Game;
 import game.gameStrategy.Player;
@@ -111,6 +109,10 @@ public class SolveCommands {
                 if (command.compareTo("getFrozenCardsOnTable") == 0) {
                     getFrozenCardsOnTable(currentGame, output);
                 }
+
+                if (command.compareTo("cardUsesAttack") == 0) {
+                    cardUsesAttack(currentGame, action, output);
+                }
             }
         }
 
@@ -159,7 +161,6 @@ public class SolveCommands {
 
     }
 
-    //merge doar pt test1
     public void getPlayerTurn(Game currentGame, ArrayNode output) {
         int playerTurn;
 //        playerTurn = game.getStartGame().getStartingPlayer();
@@ -192,6 +193,7 @@ public class SolveCommands {
                 ArrayList<CardInputData> row = table.get(i);
                 for (CardInputData card : row) {
                     card.setFrozen(0);
+                    card.setAttack(0);
                 }
             }
             currentGame.changePlayer(2);
@@ -200,12 +202,13 @@ public class SolveCommands {
                 ArrayList<CardInputData> row = table.get(i);
                 for (CardInputData card : row) {
                     card.setFrozen(0);
+                    card.setAttack(0);
                 }
             }
             currentGame.changePlayer(1);
         }
 
-        //todo la finalul turei unui jucator cartile frozen sunt demarcate
+        //todo la finalul turei unui jucator cartile frozen sunt demarcate, precum si cartile care au atacat deja in tura
     }
 
     public void getCardsInHand(int playerIdx, Player player1, Player player2, ArrayNode output) {
@@ -392,7 +395,7 @@ public class SolveCommands {
         ArrayList<CardInputData> row = table.get(x);
 
         if (y >= row.size()) {
-            outputCommand.put("output", "No card at that position.");
+            outputCommand.put("output", "No card available at that position.");
 
         } else {
             FormCard displayCard = new FormCard();
@@ -529,5 +532,108 @@ public class SolveCommands {
         outputCommand.set("output", cardArray);
 
         output.add(outputCommand);
+    }
+
+    public void cardUsesAttack( Game currentGame, ActionsInputData action, ArrayNode output) {
+
+        CoordinatesData attackerCoordinates = action.getCardAttacker();
+        CoordinatesData attackedCoordinates = action.getCardAttacked();
+
+        int attackerX = attackerCoordinates.getX();
+        int attackerY = attackerCoordinates.getY();
+
+        int attackedX = attackedCoordinates.getX();
+        int attackedY = attackedCoordinates.getY();
+
+
+        boolean done = false;
+
+        if (currentGame.getCurrentPlayer() == 1) {
+            if (attackerX >= 2 && attackedX >= 2) {
+                DisplayError displayError = new DisplayError();
+                displayError.displayErrorcardUsesAttack(output, attackerCoordinates, attackedCoordinates, "Attacked card does not belong to the enemy.");
+                done = true;
+            }
+        }
+
+        if (currentGame.getCurrentPlayer() == 2) {
+            if (attackerX <= 1 && attackedX <= 1) {
+                DisplayError displayError = new DisplayError();
+                displayError.displayErrorcardUsesAttack(output, attackerCoordinates, attackedCoordinates, "Attacked card does not belong to the enemy.");
+                done = true;
+            }
+        }
+
+        ArrayList<ArrayList<CardInputData>> table = currentGame.getTable();
+        if ((attackerX < table.size() && attackedX < table.size()) &&
+                (attackerY < table.get(attackerX).size() && attackedY < table.get(attackedX).size())) {
+
+            CardInputData attackerCard = table.get(attackerX).get(attackerY);
+            CardInputData attackedCard = table.get(attackedX).get(attackedY);
+
+            if (!done && attackerCard.getAttack() == 1) { // daca cartea deja a atatacat in tura curenta
+                DisplayError displayError = new DisplayError();
+                displayError.displayErrorcardUsesAttack(output, attackerCoordinates, attackedCoordinates, "Attacker card has already attacked this turn.");
+                done = true;
+            }
+
+            if (!done && attackerCard.getFrozen() == 1) { // daca cartea este frozen
+                DisplayError displayError = new DisplayError();
+                displayError.displayErrorcardUsesAttack(output, attackerCoordinates, attackedCoordinates, "Attacker card is frozen.");
+                done = true;
+            }
+
+            // cautam daca pa randurile adversarului se gaseste o carte Tank si daca cartea aleasa nu este Tank
+            Minion minionCards = new Minion();
+            ArrayList<String> tankCards = minionCards.getTankCards();
+
+            if (!tankCards.contains(attackedCard.getName())) { // am verificat ca aceea carte nu este tank
+                // verific daca exista carti tank, si daca da afisez eroare
+
+                if (!done && currentGame.getCurrentPlayer() == 1) {
+                    for (int i = 0; i < 2; i++) {
+                        ArrayList<CardInputData> row = table.get(i);
+                        for (CardInputData card : row) {
+                            if (tankCards.contains(card.getName())) {
+                                DisplayError displayError = new DisplayError();
+                                displayError.displayErrorcardUsesAttack(output, attackerCoordinates, attackedCoordinates, "Attacked card is not of type 'Tank'.");
+                                done = true;
+                                break;
+                            }
+                        }
+                    }
+                }
+
+                if (!done && currentGame.getCurrentPlayer() == 2) {
+                    for (int i = 2; i < 4; i++) {
+                        ArrayList<CardInputData> row = table.get(i);
+                        for (CardInputData card : row) {
+                            if (tankCards.contains(card.getName())) {
+                                DisplayError displayError = new DisplayError();
+                                displayError.displayErrorcardUsesAttack(output, attackerCoordinates, attackedCoordinates, "Attacked card is not of type 'Tank'.");
+                                done = true;
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+
+            // fac atacul propriu zis
+            if (!done) {
+                int health = attackedCard.getHealth();
+                int attackDamage = attackerCard.getAttackDamage();
+                attackedCard.setHealth(health - attackDamage);
+
+                if (attackedCard.getHealth() <= 0) {
+                    ArrayList<CardInputData> row = table.get(attackedX);
+                    row.remove(attackedY);
+                }
+
+                attackerCard.setAttack(1);
+            }
+        }
+
+
     }
 }

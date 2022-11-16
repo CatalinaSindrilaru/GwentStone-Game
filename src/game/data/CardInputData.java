@@ -14,6 +14,7 @@ public class CardInputData {
     private String name;
 
     private int frozen; // adaugat  vreau sa fie 0 daca cartea nu e frozen si 1 daca cartea e frozen
+    private int attack; // 0 initial, 1 cand deja a atacat in acea tura
 
     public CardInputData() {
 
@@ -32,6 +33,7 @@ public class CardInputData {
         this.colors.addAll(card.getColors());
         this.name = new String(card.getName());
         frozen = 0;
+        attack = 0;
     }
 
     public int getMana() {
@@ -88,5 +90,13 @@ public class CardInputData {
 
     public void setFrozen(int frozen) {
         this.frozen = frozen;
+    }
+
+    public int getAttack() {
+        return attack;
+    }
+
+    public void setAttack(int attack) {
+        this.attack = attack;
     }
 }
