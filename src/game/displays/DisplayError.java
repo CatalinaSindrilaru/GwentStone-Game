@@ -54,4 +54,26 @@ public class DisplayError {
 
         output.add(outputCommand);
     }
+
+    public void displayErrorcardUsesAbility(ArrayNode output, CoordinatesData attacker, CoordinatesData attacked, String errorMessage) {
+
+        ObjectMapper mapper = new ObjectMapper();
+
+        ObjectNode formAttacker = mapper.createObjectNode();
+        formAttacker.put("x", attacker.getX());
+        formAttacker.put("y", attacker.getY());
+
+        ObjectNode formAttacked = mapper.createObjectNode();
+        formAttacked.put("x", attacked.getX());
+        formAttacked.put("y", attacked.getY());
+
+        ObjectNode outputCommand = mapper.createObjectNode();
+
+        outputCommand.put("command", "cardUsesAbility");
+        outputCommand.set("cardAttacker", formAttacker);
+        outputCommand.set("cardAttacked", formAttacked);
+        outputCommand.put("error", errorMessage);
+
+        output.add(outputCommand);
+    }
 }

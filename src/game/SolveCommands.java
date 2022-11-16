@@ -113,6 +113,10 @@ public class SolveCommands {
                 if (command.compareTo("cardUsesAttack") == 0) {
                     cardUsesAttack(currentGame, action, output);
                 }
+
+                if (command.compareTo("cardUsesAbility") == 0) {
+                    cardUsesAbility(currentGame, action, output);
+                }
             }
         }
 
@@ -534,7 +538,7 @@ public class SolveCommands {
         output.add(outputCommand);
     }
 
-    public void cardUsesAttack( Game currentGame, ActionsInputData action, ArrayNode output) {
+    public void cardUsesAttack(Game currentGame, ActionsInputData action, ArrayNode output) {
 
         CoordinatesData attackerCoordinates = action.getCardAttacker();
         CoordinatesData attackedCoordinates = action.getCardAttacked();
@@ -635,5 +639,144 @@ public class SolveCommands {
         }
 
 
+    }
+
+    public void cardUsesAbility(Game currentGame, ActionsInputData action, ArrayNode output) {
+
+        CoordinatesData attackerCoordinates = action.getCardAttacker();
+        CoordinatesData attackedCoordinates = action.getCardAttacked();
+
+        int attackerX = attackerCoordinates.getX();
+        int attackerY = attackerCoordinates.getY();
+
+        int attackedX = attackedCoordinates.getX();
+        int attackedY = attackedCoordinates.getY();
+
+        boolean done = false;
+
+        ArrayList<ArrayList<CardInputData>> table = currentGame.getTable();
+
+        if ((attackerX < table.size() && attackedX < table.size()) &&
+                (attackerY < table.get(attackerX).size() && attackedY < table.get(attackedX).size())) {
+
+            CardInputData attackerCard = table.get(attackerX).get(attackerY);
+            CardInputData attackedCard = table.get(attackedX).get(attackedY);
+
+            if (!done && attackerCard.getFrozen() == 1) { // daca cartea este frozen
+                DisplayError displayError = new DisplayError();
+                displayError.displayErrorcardUsesAbility(output, attackerCoordinates, attackedCoordinates, "Attacker card is frozen.");
+                done = true;
+            }
+
+            if (!done && attackerCard.getAttack() == 1) { // daca cartea deja a atatacat in tura curenta
+                DisplayError displayError = new DisplayError();
+                displayError.displayErrorcardUsesAbility(output, attackerCoordinates, attackedCoordinates, "Attacker card has already attacked this turn.");
+                done = true;
+            }
+
+            if (!done && attackerCard.getName().compareTo("Disciple") == 0) {
+                if (currentGame.getCurrentPlayer() == 1) {
+                    if (!(attackerX >= 2 && attackedX >= 2)) {
+                        DisplayError displayError = new DisplayError();
+                        displayError.displayErrorcardUsesAbility(output, attackerCoordinates, attackedCoordinates, "Attacked card does not belong to the current player.");
+                        done = true;
+                    }
+                }
+                if (currentGame.getCurrentPlayer() == 2) {
+                    if (!(attackerX <= 1 && attackedX <= 1)) {
+                        DisplayError displayError = new DisplayError();
+                        displayError.displayErrorcardUsesAbility(output, attackerCoordinates, attackedCoordinates, "Attacked card does not belong to the current player.");
+                        done = true;
+                    }
+                }
+            } else if (!done) {
+                if (currentGame.getCurrentPlayer() == 1) {
+                    if (attackerX >= 2 && attackedX >= 2) {
+                        DisplayError displayError = new DisplayError();
+                        displayError.displayErrorcardUsesAbility(output, attackerCoordinates, attackedCoordinates, "Attacked card does not belong to the enemy.");
+                        done = true;
+                    }
+                }
+
+                if (currentGame.getCurrentPlayer() == 2) {
+                    if (attackerX <= 1 && attackedX <= 1) {
+                        DisplayError displayError = new DisplayError();
+                        displayError.displayErrorcardUsesAbility(output, attackerCoordinates, attackedCoordinates, "Attacked card does not belong to the enemy.");
+                        done = true;
+                    }
+                }
+            }
+
+            Minion minionCards = new Minion();
+            ArrayList<String> tankCards = minionCards.getTankCards();
+
+            if (!tankCards.contains(attackedCard.getName())) { // am verificat ca aceea carte nu este tank
+                // verific daca exista carti tank, si daca da afisez eroare
+
+                if (!done && currentGame.getCurrentPlayer() == 1) {
+                    for (int i = 0; i < 2; i++) {
+                        ArrayList<CardInputData> row = table.get(i);
+                        for (CardInputData card : row) {
+                            if (tankCards.contains(card.getName())) {
+                                DisplayError displayError = new DisplayError();
+                                displayError.displayErrorcardUsesAbility(output, attackerCoordinates, attackedCoordinates, "Attacked card is not of type 'Tank'.");
+                                done = true;
+                                break;
+                            }
+                        }
+                    }
+                }
+
+                if (!done && currentGame.getCurrentPlayer() == 2) {
+                    for (int i = 2; i < 4; i++) {
+                        ArrayList<CardInputData> row = table.get(i);
+                        for (CardInputData card : row) {
+                            if (tankCards.contains(card.getName())) {
+                                DisplayError displayError = new DisplayError();
+                                displayError.displayErrorcardUsesAbility(output, attackerCoordinates, attackedCoordinates, "Attacked card is not of type 'Tank'.");
+                                done = true;
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+
+            if (!done) {
+                if (attackerCard.getName().compareTo("The Ripper") == 0) {
+                    int attackDamage = attackedCard.getAttackDamage();
+                    attackedCard.setAttackDamage(attackDamage - 2);
+                    if (attackedCard.getAttackDamage() < 0) {
+                        attackedCard.setAttackDamage(0);
+                    }
+                }
+
+                if (attackerCard.getName().compareTo("Miraj") == 0) {
+                    int healthAttacker = attackerCard.getHealth();
+                    int healthAttacked = attackedCard.getHealth();
+                    attackerCard.setHealth(healthAttacked);
+                    attackedCard.setHealth(healthAttacker);
+                }
+
+                if (attackerCard.getName().compareTo("The Cursed One") == 0) {
+                    int healthAttacked = attackedCard.getHealth();
+                    int attackDamageAttacked = attackedCard.getAttackDamage();
+
+                    attackedCard.setHealth(attackDamageAttacked);
+                    attackedCard.setAttackDamage(healthAttacked);
+
+                    if (attackedCard.getHealth() <= 0) {
+                        table.get(attackedX).remove(attackedY);
+                    }
+                }
+
+                if (attackerCard.getName().compareTo("Disciple") == 0) {
+                    int healthAttacked = attackedCard.getHealth();
+                    attackedCard.setHealth(healthAttacked + 2);
+                }
+
+                attackerCard.setAttack(1);
+            }
+        }
     }
 }
