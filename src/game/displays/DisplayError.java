@@ -93,4 +93,16 @@ public class DisplayError {
 
         output.add(outputCommand);
     }
+
+    public void displayErrorUseAbilityHero(ArrayNode output, int affectedRow, String errorMessage) {
+        ObjectMapper mapper = new ObjectMapper();
+        ObjectNode outputCommand = mapper.createObjectNode();
+
+        outputCommand.put("command", "useHeroAbility");
+        outputCommand.put("affectedRow", affectedRow);
+        outputCommand.put("error", errorMessage);
+
+        output.add(outputCommand);
+    }
+
 }

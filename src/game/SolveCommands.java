@@ -37,6 +37,8 @@ public class SolveCommands {
             Player player1 = new Player();
             Player player2 = new Player();
 
+            CardInputData playerOneHero = game.getStartGame().getPlayerOneHero();
+            CardInputData playerTwoHero = game.getStartGame().getPlayerTwoHero();
             // scot carte
 
             // sterg prima carte din game si o oun in mana
@@ -72,7 +74,7 @@ public class SolveCommands {
                 }
 
                 if (command.compareTo("endPlayerTurn") == 0) {
-                    endPlayerTurn(currentGame, player1, player2, playerOneDeck, playerTwoDeck);
+                    endPlayerTurn(currentGame, player1, player2, playerOneDeck, playerTwoDeck, playerOneHero, playerTwoHero);
                 }
 
                 if  (command.compareTo(("placeCard")) == 0) {
@@ -121,6 +123,12 @@ public class SolveCommands {
                 if (command.compareTo("useAttackHero") == 0) {
                     StartGameInputData startGameInputData = game.getStartGame();
                     useAttackHero(startGameInputData, currentGame, action, output);
+                }
+
+                if (command.compareTo("useHeroAbility") == 0) {
+                    int affectedRow = action.getAffectedRow();
+                    StartGameInputData startGameInputData = game.getStartGame();
+                    useHeroAbility(startGameInputData, currentGame, player1, player2, affectedRow, output);
                 }
             }
         }
@@ -179,7 +187,8 @@ public class SolveCommands {
         displayGetPlayerTurn.displayGetPlayerTurn(playerTurn, output);
     }
 
-    public void endPlayerTurn(Game currentGame, Player player1, Player player2,  ArrayList<CardInputData> playerOneDeck, ArrayList<CardInputData> playerTwoDeck) {
+    public void endPlayerTurn(Game currentGame, Player player1, Player player2,  ArrayList<CardInputData> playerOneDeck, ArrayList<CardInputData> playerTwoDeck,
+                              CardInputData playerOneHero, CardInputData playerTwoHero) {
         currentGame.increaseTour();
         if (currentGame.getTour() % 2 == 1) {
             currentGame.increaseRound();
@@ -203,6 +212,7 @@ public class SolveCommands {
                 for (CardInputData card : row) {
                     card.setFrozen(0);
                     card.setAttack(0);
+                    playerOneHero.setAttack(0);
                 }
             }
             currentGame.changePlayer(2);
@@ -212,6 +222,7 @@ public class SolveCommands {
                 for (CardInputData card : row) {
                     card.setFrozen(0);
                     card.setAttack(0);
+                    playerTwoHero.setAttack(0);
                 }
             }
             currentGame.changePlayer(1);
@@ -878,6 +889,114 @@ public class SolveCommands {
 
         }
 
+
+    }
+
+    public void useHeroAbility(StartGameInputData startGameInputData, Game currentGame, Player player1, Player player2, int affectedRow, ArrayNode output) {
+
+        Player player = player1;
+        CardInputData hero = startGameInputData.getPlayerOneHero();
+
+        if (currentGame.getCurrentPlayer() == 2) {
+            hero = startGameInputData.getPlayerTwoHero();
+            player = player2;
+        }
+
+        boolean done = false;
+        if (player.getMana() < hero.getMana()) {
+            DisplayError displayError = new DisplayError();
+            displayError.displayErrorUseAbilityHero(output, affectedRow, "Not enough mana to use hero's ability.");
+            done = true;
+        }
+
+        if (!done && hero.getAttack() == 1) { // daca cartea deja a atatacat in tura curenta
+            DisplayError displayError = new DisplayError();
+            displayError.displayErrorUseAbilityHero(output, affectedRow, "Hero has already attacked this turn.");
+            done = true;
+        }
+
+        if (!done && (hero.getName().compareTo("Lord Royce") == 0 || hero.getName().compareTo("Empress Thorina") == 0)) {
+            if (player == player1) {
+                if (affectedRow >= 2) {
+                    DisplayError displayError = new DisplayError();
+                    displayError.displayErrorUseAbilityHero(output, affectedRow, "Selected row does not belong to the enemy.");
+                    done = true;
+                }
+            } else {
+                if (affectedRow <= 1) {
+                    DisplayError displayError = new DisplayError();
+                    displayError.displayErrorUseAbilityHero(output, affectedRow, "Selected row does not belong to the enemy.");
+                    done = true;
+                }
+            }
+        }
+
+        if (!done && (hero.getName().compareTo("General Kocioraw") == 0 || hero.getName().compareTo("King Mudface") == 0)) {
+            if (player == player1) {
+                if (affectedRow <= 1) {
+                    DisplayError displayError = new DisplayError();
+                    displayError.displayErrorUseAbilityHero(output, affectedRow, "Selected row does not belong to the current player.");
+                    done = true;
+                }
+            } else {
+                if (affectedRow >= 2) {
+                    DisplayError displayError = new DisplayError();
+                    displayError.displayErrorUseAbilityHero(output, affectedRow, "Selected row does not belong to the current player.");
+                    done = true;
+                }
+            }
+        }
+
+        ArrayList<ArrayList<CardInputData>> table = currentGame.getTable();
+        ArrayList<CardInputData> row = table.get(affectedRow);
+
+        if (!done) {
+            if (hero.getName().compareTo("Lord Royce") == 0) {  //  îngheață cartea cu cel mai mare atac de pe rând
+                int maxAttackDamage = Integer.MIN_VALUE;
+                int position = 0;
+                for (int i = 0; i < row.size(); i++) {
+                    CardInputData card = row.get(i);
+                    if (card.getAttackDamage() > maxAttackDamage) {
+                        maxAttackDamage = card.getAttackDamage();
+                        position = i;
+                    }
+                }
+                CardInputData card = row.get(position);
+                card.setFrozen(1);
+            }
+
+            if (hero.getName().compareTo("Empress Thorina") == 0) {  // distruge cartea cu cea mai mare viață de pe rând.
+                int maxHealth = Integer.MIN_VALUE;
+                int position = 0;
+                for (int i = 0; i < row.size(); i++) {
+                    CardInputData card = row.get(i);
+                    if (card.getHealth() > maxHealth) {
+                        maxHealth = card.getHealth();
+                        position = i;
+                    }
+                }
+
+                row.remove(position);
+            }
+
+            if (hero.getName().compareTo("King Mudface") == 0) { // +1 viață pentru toate cărțile de pe rând.
+                for (CardInputData card : row) {
+                    int health = card.getHealth();
+                    card.setHealth(health + 1);
+                }
+            }
+
+            if (hero.getName().compareTo("General Kocioraw") == 0) { // +1 atac pentru toate cărțile de pe rând.
+                for (CardInputData card : row) {
+                    int attackDamage = card.getAttackDamage();
+                    card.setAttackDamage(attackDamage + 1);
+                }
+            }
+
+            hero.setAttack(1);
+            int manaPlayer = player.getMana();
+            player.setMana(manaPlayer - hero.getMana());
+        }
 
     }
 }
