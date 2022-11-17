@@ -76,4 +76,21 @@ public class DisplayError {
 
         output.add(outputCommand);
     }
+
+    public void displayErrorAttackHero(ArrayNode output, CoordinatesData attacker, String errorMessage) {
+        ObjectMapper mapper = new ObjectMapper();
+
+        ObjectNode formAttacker = mapper.createObjectNode();
+        formAttacker.put("x", attacker.getX());
+        formAttacker.put("y", attacker.getY());
+
+
+        ObjectNode outputCommand = mapper.createObjectNode();
+
+        outputCommand.put("command", "useAttackHero");
+        outputCommand.set("cardAttacker", formAttacker);
+        outputCommand.put("error", errorMessage);
+
+        output.add(outputCommand);
+    }
 }

@@ -81,6 +81,8 @@
   "command" : "getFrozenCardsOnTable",
   "output" : [ ]
 }, {
+  "gameEnded" : "Player two killed the enemy hero."
+}, {
   "command" : "getCardsOnTable",
   "output" : [ [ {
     "mana" : 1,
@@ -279,6 +281,8 @@
     "colors" : [ "Brown", "Blue" ],
     "name" : "Warden"
   }
+}, {
+  "gameEnded" : "Player one killed the enemy hero."
 }, {
   "command" : "getCardsOnTable",
   "output" : [ [ {

@@ -117,6 +117,11 @@ public class SolveCommands {
                 if (command.compareTo("cardUsesAbility") == 0) {
                     cardUsesAbility(currentGame, action, output);
                 }
+
+                if (command.compareTo("useAttackHero") == 0) {
+                    StartGameInputData startGameInputData = game.getStartGame();
+                    useAttackHero(startGameInputData, currentGame, action, output);
+                }
             }
         }
 
@@ -778,5 +783,101 @@ public class SolveCommands {
                 attackerCard.setAttack(1);
             }
         }
+    }
+
+    public void  useAttackHero(StartGameInputData startGameInputData, Game currentGame, ActionsInputData action, ArrayNode output) {
+
+        CoordinatesData attackerCoordinates = action.getCardAttacker();
+
+        int attackerX = attackerCoordinates.getX();
+        int attackerY = attackerCoordinates.getY();
+
+        boolean done = false;
+
+        ArrayList<ArrayList<CardInputData>> table = currentGame.getTable();
+
+        if (attackerX < table.size()  && attackerY < table.get(attackerX).size()) {
+
+            CardInputData attackerCard = table.get(attackerX).get(attackerY);
+
+            if (!done && attackerCard.getFrozen() == 1) { // daca cartea este frozen
+                DisplayError displayError = new DisplayError();
+                displayError.displayErrorAttackHero(output, attackerCoordinates, "Attacker card is frozen.");
+                done = true;
+            }
+
+            if (!done && attackerCard.getAttack() == 1) { // daca cartea deja a atatacat in tura curenta
+                DisplayError displayError = new DisplayError();
+                displayError.displayErrorAttackHero(output, attackerCoordinates, "Attacker card has already attacked this turn.");
+                done = true;
+            }
+
+            Minion minionCards = new Minion();
+            ArrayList<String> tankCards = minionCards.getTankCards();
+
+             // am verificat ca aceea carte nu este tank
+                // verific daca exista carti tank, si daca da afisez eroare
+
+            if (!done && currentGame.getCurrentPlayer() == 1) {
+                for (int i = 0; i < 2; i++) {
+                    ArrayList<CardInputData> row = table.get(i);
+                    for (CardInputData card : row) {
+                        if (tankCards.contains(card.getName())) {
+                            DisplayError displayError = new DisplayError();
+                            displayError.displayErrorAttackHero(output, attackerCoordinates, "Attacked card is not of type 'Tank'.");
+                            done = true;
+                            break;
+                        }
+                    }
+                }
+            }
+
+            if (!done && currentGame.getCurrentPlayer() == 2) {
+                for (int i = 2; i < 4; i++) {
+                    ArrayList<CardInputData> row = table.get(i);
+                    for (CardInputData card : row) {
+                        if (tankCards.contains(card.getName())) {
+                            DisplayError displayError = new DisplayError();
+                            displayError.displayErrorAttackHero(output, attackerCoordinates, "Attacked card is not of type 'Tank'.");
+                            done = true;
+                            break;
+                        }
+                    }
+                }
+            }
+
+            if (!done) {
+                if (currentGame.getCurrentPlayer() == 1) {
+                    CardInputData heroEnemy = startGameInputData.getPlayerTwoHero();
+                    int healthHero = heroEnemy.getHealth();
+                    int attackDamage = attackerCard.getAttackDamage();
+                    heroEnemy.setHealth(healthHero - attackDamage);
+
+                    if (heroEnemy.getHealth() <= 0) {
+                        ObjectMapper mapper = new ObjectMapper();
+                        ObjectNode outputCommand = mapper.createObjectNode();
+                        outputCommand.put("gameEnded", "Player one killed the enemy hero.");
+                        output.add(outputCommand);
+                    }
+                } else {
+                    CardInputData heroEnemy = startGameInputData.getPlayerOneHero();
+                    int healthHero = heroEnemy.getHealth();
+                    int attackDamage = attackerCard.getAttackDamage();
+                    heroEnemy.setHealth(healthHero - attackDamage);
+
+                    if (heroEnemy.getHealth() <= 0) {
+                        ObjectMapper mapper = new ObjectMapper();
+                        ObjectNode outputCommand = mapper.createObjectNode();
+                        outputCommand.put("gameEnded", "Player two killed the enemy hero.");
+                        output.add(outputCommand);
+                    }
+                }
+
+                attackerCard.setAttack(1);
+            }
+
+        }
+
+
     }
 }
