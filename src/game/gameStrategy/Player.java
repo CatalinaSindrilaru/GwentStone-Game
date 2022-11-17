@@ -9,8 +9,6 @@ public class Player {
 
     private ArrayList<CardInputData> hand = new ArrayList<>();
     private int mana;
-    private int totalGames;
-    private int WinnedGames;
 
     public ArrayList<CardInputData> getHand() {
         return hand;
@@ -32,19 +30,4 @@ public class Player {
         this.mana = mana;
     }
 
-    public int getTotalGames() {
-        return totalGames;
-    }
-
-    public void setTotalGames(int totalGames) {
-        this.totalGames = totalGames;
-    }
-
-    public int getWinnedGames() {
-        return WinnedGames;
-    }
-
-    public void setWinnedGames(int winnedGames) {
-        WinnedGames = winnedGames;
-    }
 }

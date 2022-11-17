@@ -5,23 +5,27 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import fileio.Coordinates;
+import fileio.Input;
 import game.card.environment.Environment;
 import game.card.minion.Minion;
 import game.data.*;
 import game.displays.*;
 import game.gameStrategy.Game;
 import game.gameStrategy.Player;
+import game.gameStrategy.Statistics;
 
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Random;
 
 public class SolveCommands {
-    public void display(String file, InputData inputData, ArrayNode output) {
+    public void display(String file, InputData input, ArrayNode output, Input theirData) {
 
-        ArrayList<GameInputData> games = inputData.getGames();
+        ArrayList<GameInputData> games = input.getGames();
+        Statistics statistics = new Statistics();
 
         for (GameInputData game : games) {
+            InputData inputData = new InputData(theirData);
             ArrayList<ActionsInputData> actions = game.getActions();
 
             ArrayList<CardInputData> playerOneDeck, playerTwoDeck;
@@ -41,7 +45,7 @@ public class SolveCommands {
             CardInputData playerTwoHero = game.getStartGame().getPlayerTwoHero();
             // scot carte
 
-            // sterg prima carte din game si o oun in mana
+            // sterg prima carte din game si o pun in mana
 
             player1.getHand().add(playerOneDeck.remove(0));
             player2.getHand().add(playerTwoDeck.remove(0));
@@ -54,6 +58,7 @@ public class SolveCommands {
             player2.setMana(1);
 
 
+            statistics.increaseTotalGamesPlayed();
             for (ActionsInputData action : actions) {
                 String command = new String(action.getCommand());
 
@@ -122,13 +127,25 @@ public class SolveCommands {
 
                 if (command.compareTo("useAttackHero") == 0) {
                     StartGameInputData startGameInputData = game.getStartGame();
-                    useAttackHero(startGameInputData, currentGame, action, output);
+                    useAttackHero(startGameInputData, currentGame, action, output, statistics);
                 }
 
                 if (command.compareTo("useHeroAbility") == 0) {
                     int affectedRow = action.getAffectedRow();
                     StartGameInputData startGameInputData = game.getStartGame();
                     useHeroAbility(startGameInputData, currentGame, player1, player2, affectedRow, output);
+                }
+
+                if (command.compareTo("getTotalGamesPlayed") == 0) {
+                    getTotalGamesPlayed(statistics, output);
+                }
+
+                if (command.compareTo("getPlayerOneWins") == 0) {
+                    getPlayerOneWins(statistics, output);
+                }
+
+                if (command.compareTo("getPlayerTwoWins") == 0) {
+                    getPlayerTwoWins(statistics, output);
                 }
             }
         }
@@ -726,7 +743,7 @@ public class SolveCommands {
             Minion minionCards = new Minion();
             ArrayList<String> tankCards = minionCards.getTankCards();
 
-            if (!tankCards.contains(attackedCard.getName())) { // am verificat ca aceea carte nu este tank
+            if (!done && !tankCards.contains(attackedCard.getName())) { // am verificat ca aceea carte nu este tank
                 // verific daca exista carti tank, si daca da afisez eroare
 
                 if (!done && currentGame.getCurrentPlayer() == 1) {
@@ -796,7 +813,7 @@ public class SolveCommands {
         }
     }
 
-    public void  useAttackHero(StartGameInputData startGameInputData, Game currentGame, ActionsInputData action, ArrayNode output) {
+    public void  useAttackHero(StartGameInputData startGameInputData, Game currentGame, ActionsInputData action, ArrayNode output, Statistics statistics) {
 
         CoordinatesData attackerCoordinates = action.getCardAttacker();
 
@@ -868,7 +885,10 @@ public class SolveCommands {
                         ObjectMapper mapper = new ObjectMapper();
                         ObjectNode outputCommand = mapper.createObjectNode();
                         outputCommand.put("gameEnded", "Player one killed the enemy hero.");
+
                         output.add(outputCommand);
+
+                        statistics.increasePlayerOneWins();
                     }
                 } else {
                     CardInputData heroEnemy = startGameInputData.getPlayerOneHero();
@@ -881,6 +901,8 @@ public class SolveCommands {
                         ObjectNode outputCommand = mapper.createObjectNode();
                         outputCommand.put("gameEnded", "Player two killed the enemy hero.");
                         output.add(outputCommand);
+
+                        statistics.increasePlayerTwoWins();
                     }
                 }
 
@@ -998,5 +1020,35 @@ public class SolveCommands {
             player.setMana(manaPlayer - hero.getMana());
         }
 
+    }
+
+    public void getTotalGamesPlayed(Statistics statistics, ArrayNode output) {
+        ObjectMapper mapper = new ObjectMapper();
+        ObjectNode outputCommand = mapper.createObjectNode();
+
+        outputCommand.put("command", "getTotalGamesPlayed");
+        outputCommand.put("output", statistics.getTotalGamesPlayed());
+
+        output.add(outputCommand);
+    }
+
+    public void getPlayerOneWins(Statistics statistics, ArrayNode output) {
+        ObjectMapper mapper = new ObjectMapper();
+        ObjectNode outputCommand = mapper.createObjectNode();
+
+        outputCommand.put("command", "getPlayerOneWins");
+        outputCommand.put("output", statistics.getPlayerOneWins());
+
+        output.add(outputCommand);
+    }
+
+    public void getPlayerTwoWins(Statistics statistics, ArrayNode output) {
+        ObjectMapper mapper = new ObjectMapper();
+        ObjectNode outputCommand = mapper.createObjectNode();
+
+        outputCommand.put("command", "getPlayerTwoWins");
+        outputCommand.put("output", statistics.getPlayerTwoWins());
+
+        output.add(outputCommand);
     }
 }
