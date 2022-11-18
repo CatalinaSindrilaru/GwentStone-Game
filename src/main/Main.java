@@ -78,7 +78,7 @@ public final class Main {
         InputData data = new InputData(inputData);
 
 //        System.out.println(filePath1 + " " + data.getPlayerOneDecks().getDecks().get(0).get(0).getName());
-//        if (filePath1.equals("test16_multiple_games_valid.json")) {
+//        if (filePath1.equals("test18_big_game.json")) {
 //            InputData data = new InputData(inputData);
 //            SolveCommands gata = new SolveCommands();
 //            gata.display(filePath1, data, output, inputData);

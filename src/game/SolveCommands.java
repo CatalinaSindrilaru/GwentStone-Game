@@ -743,7 +743,7 @@ public class SolveCommands {
             Minion minionCards = new Minion();
             ArrayList<String> tankCards = minionCards.getTankCards();
 
-            if (!done && !tankCards.contains(attackedCard.getName())) { // am verificat ca aceea carte nu este tank
+            if (!done && !tankCards.contains(attackedCard.getName()) && attackerCard.getName().compareTo("Disciple") != 0) { // am verificat ca aceea carte nu este tank
                 // verific daca exista carti tank, si daca da afisez eroare
 
                 if (!done && currentGame.getCurrentPlayer() == 1) {

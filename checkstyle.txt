@@ -328,7 +328,7 @@ Starting audit...
 [ERROR] /home/catalina/Desktop/GwentStone-Game/./src/game/SolveCommands.java:721: Line is longer than 100 characters (found 171). [LineLength]
 [ERROR] /home/catalina/Desktop/GwentStone-Game/./src/game/SolveCommands.java:729: Line is longer than 100 characters (found 162). [LineLength]
 [ERROR] /home/catalina/Desktop/GwentStone-Game/./src/game/SolveCommands.java:737: Line is longer than 100 characters (found 162). [LineLength]
-[ERROR] /home/catalina/Desktop/GwentStone-Game/./src/game/SolveCommands.java:746: Line is longer than 100 characters (found 115). [LineLength]
+[ERROR] /home/catalina/Desktop/GwentStone-Game/./src/game/SolveCommands.java:746: Line is longer than 100 characters (found 168). [LineLength]
 [ERROR] /home/catalina/Desktop/GwentStone-Game/./src/game/SolveCommands.java:755: Line is longer than 100 characters (found 163). [LineLength]
 [ERROR] /home/catalina/Desktop/GwentStone-Game/./src/game/SolveCommands.java:764:41: '4' is a magic number. [MagicNumber]
 [ERROR] /home/catalina/Desktop/GwentStone-Game/./src/game/SolveCommands.java:769: Line is longer than 100 characters (found 163). [LineLength]
