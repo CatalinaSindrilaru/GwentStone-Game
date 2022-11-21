@@ -1,267 +1,300 @@
 package game;
 
-import com.fasterxml.jackson.core.ObjectCodec;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
-import fileio.Coordinates;
 import fileio.Input;
-import game.card.environment.Environment;
-import game.card.minion.Minion;
-import game.data.*;
-import game.displays.*;
+import game.card.Environment;
+import game.card.Hero;
+import game.card.Minion;
+import game.data.ActionsInputData;
+import game.data.CardInputData;
+import game.data.GameInputData;
+import game.data.InputData;
+import game.data.StartGameInputData;
+import game.displays.Display;
+import game.displays.FormCard;
+import game.displays.FormDeck;
 import game.gameStrategy.Game;
 import game.gameStrategy.Player;
+import game.gameStrategy.Settings;
 import game.gameStrategy.Statistics;
+import game.gameStrategy.VerifyErrors;
 
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Random;
 
 public class SolveCommands {
-    public void display(String file, InputData input, ArrayNode output, Input theirData) {
+    /* In table, first player has third and fourth rows */
+    public static final int FIRST_ROW_PLAYER1 = 2;
+    /* In table, second player has first and second  rows */
+    public static final int FIRST_ROW_PLAYER2 = 0;
 
+    public static final int MAX_NUMBER_ROWS = 4;
+
+    /**
+     * Receive all the commands and call the appropriate methods
+     * @param input copy of the initial data
+     * @param output the final output in which it is written
+     * @param theirData Initial data
+     */
+    public void display(final InputData input, final ArrayNode output, final Input theirData) {
+
+        /* Extract all the games */
         ArrayList<GameInputData> games = input.getGames();
         Statistics statistics = new Statistics();
 
+        /* Go through all the games */
         for (GameInputData game : games) {
-            InputData inputData = new InputData(theirData);
-            ArrayList<ActionsInputData> actions = game.getActions();
+            statistics.increaseTotalGamesPlayed();
 
-            ArrayList<CardInputData> playerOneDeck, playerTwoDeck;
+            InputData inputData = new InputData(theirData);
+            /* Extract the actions for the actual game */
+            ArrayList<ActionsInputData> actions = game.getActions();
+            /* Extract which deck each player plays with */
             int playerOneDeckIdx = game.getStartGame().getPlayerOneDeckIdx();
             int playerTwoDeckIdx = game.getStartGame().getPlayerTwoDeckIdx();
 
+            /* Extract the deck for each player */
+            ArrayList<CardInputData> playerOneDeck;
+            ArrayList<CardInputData> playerTwoDeck;
             playerOneDeck = inputData.getPlayerOneDecks().getDecks().get(playerOneDeckIdx);
             playerTwoDeck = inputData.getPlayerTwoDecks().getDecks().get(playerTwoDeckIdx);
 
+            /* Shuffle the decks */
             Collections.shuffle(playerOneDeck, new Random(game.getStartGame().getShuffleSeed()));
             Collections.shuffle(playerTwoDeck, new Random(game.getStartGame().getShuffleSeed()));
 
             Player player1 = new Player();
             Player player2 = new Player();
 
+            /* Extract the hero for each player*/
             CardInputData playerOneHero = game.getStartGame().getPlayerOneHero();
             CardInputData playerTwoHero = game.getStartGame().getPlayerTwoHero();
-            // scot carte
 
-            // sterg prima carte din game si o pun in mana
-
+            /* Delete the first card in the range and put it in hand */
             player1.getHand().add(playerOneDeck.remove(0));
             player2.getHand().add(playerTwoDeck.remove(0));
 
-            // creez o masa noua la fiecare joc nou. incep o noua tura/runda si schimb jucatorul la starting player
+            /* Create a new table for each new game and  initialize turn and round with 1 */
             Game currentGame = new Game();
             currentGame.newGame();
+            /* Change the player to the starting player */
             currentGame.changePlayer(game.getStartGame().getStartingPlayer());
-            player1.setMana(1);  // mana pt jucator = 1
+            /* Set mana for each player at 1 */
+            player1.setMana(1);
             player2.setMana(1);
 
-
-            statistics.increaseTotalGamesPlayed();
+            /* Go through all the actions for a game */
             for (ActionsInputData action : actions) {
+
                 String command = new String(action.getCommand());
 
                 if (command.compareTo("getCardsInHand") == 0) {
                     getCardsInHand(action.getPlayerIdx(), player1, player2, output);
-                }
 
-                if (command.compareTo("getPlayerDeck") == 0) {
+                } else if (command.compareTo("getPlayerDeck") == 0) {
                     getPlayerDeck(inputData, game, action, output);
-                }
 
-                if (command.compareTo("getPlayerTurn") == 0) {
+                } else if (command.compareTo("getPlayerTurn") == 0) {
                     getPlayerTurn(currentGame, output);
-                }
 
-                if (command.compareTo("getPlayerHero") == 0) {
+                } else if (command.compareTo("getPlayerHero") == 0) {
                     getPlayerHero(game, action, output);
-                }
 
-                if (command.compareTo("endPlayerTurn") == 0) {
-                    endPlayerTurn(currentGame, player1, player2, playerOneDeck, playerTwoDeck, playerOneHero, playerTwoHero);
-                }
+                } else if (command.compareTo("endPlayerTurn") == 0) {
+                    endPlayerTurn(currentGame, player1, player2, playerOneDeck,
+                                  playerTwoDeck, playerOneHero, playerTwoHero);
 
-                if  (command.compareTo(("placeCard")) == 0) {
-                    int handIdx = action.getHandIdx();
-                    placeCard(currentGame, handIdx, player1, player2, output);
-                }
+                } else if  (command.compareTo(("placeCard")) == 0) {
+                    placeCard(currentGame, action.getHandIdx(), player1, player2, output);
 
-                if (command.compareTo("getPlayerMana") == 0) {
-                    int playerIdx = action.getPlayerIdx();
-                    getPlayerMana(playerIdx, player1, player2, output);
-                }
+                } else if (command.compareTo("getPlayerMana") == 0) {
+                    getPlayerMana(action.getPlayerIdx(), player1, player2, output);
 
-                if (command.compareTo("getCardsOnTable") == 0) {
+                } else if (command.compareTo("getCardsOnTable") == 0) {
                     getCardsOnTable(currentGame, output);
-                }
 
-                if (command.compareTo("getEnvironmentCardsInHand") == 0) {
-                    int playerIdx = action.getPlayerIdx();
-                    getEnvironmentCardsInHand(playerIdx, player1, player2, output);
-                }
+                } else if (command.compareTo("getEnvironmentCardsInHand") == 0) {
+                    getEnvironmentCardsInHand(action.getPlayerIdx(), player1, player2, output);
 
-                if (command.compareTo("getCardAtPosition") == 0) {
-                    int x = action.getX();
-                    int y = action.getY();
-                    getCardAtPosition(currentGame, x, y, output);
-                }
+                } else if (command.compareTo("getCardAtPosition") == 0) {
+                    getCardAtPosition(currentGame, action.getX(), action.getY(), output);
 
-                if (command.compareTo("useEnvironmentCard") == 0) {
-                    int handIdx = action.getHandIdx();
-                    int affectedRow = action.getAffectedRow();
-                    useEnvironmentCard(currentGame, player1, player2, handIdx, affectedRow, output);
-                }
+                } else if (command.compareTo("useEnvironmentCard") == 0) {
+                    useEnvironmentCard(currentGame, player1, player2, action.getHandIdx(),
+                                       action.getAffectedRow(), output);
 
-                if (command.compareTo("getFrozenCardsOnTable") == 0) {
+                } else if (command.compareTo("getFrozenCardsOnTable") == 0) {
                     getFrozenCardsOnTable(currentGame, output);
-                }
 
-                if (command.compareTo("cardUsesAttack") == 0) {
+                } else if (command.compareTo("cardUsesAttack") == 0) {
                     cardUsesAttack(currentGame, action, output);
-                }
 
-                if (command.compareTo("cardUsesAbility") == 0) {
+                } else if (command.compareTo("cardUsesAbility") == 0) {
                     cardUsesAbility(currentGame, action, output);
-                }
 
-                if (command.compareTo("useAttackHero") == 0) {
-                    StartGameInputData startGameInputData = game.getStartGame();
-                    useAttackHero(startGameInputData, currentGame, action, output, statistics);
-                }
+                } else if (command.compareTo("useAttackHero") == 0) {
+                    useAttackHero(game.getStartGame(), currentGame, action, output, statistics);
 
-                if (command.compareTo("useHeroAbility") == 0) {
-                    int affectedRow = action.getAffectedRow();
-                    StartGameInputData startGameInputData = game.getStartGame();
-                    useHeroAbility(startGameInputData, currentGame, player1, player2, affectedRow, output);
-                }
+                } else if (command.compareTo("useHeroAbility") == 0) {
+                    useHeroAbility(game.getStartGame(), currentGame, player1, player2,
+                                   action.getAffectedRow(), output);
 
-                if (command.compareTo("getTotalGamesPlayed") == 0) {
+                } else if (command.compareTo("getTotalGamesPlayed") == 0) {
                     getTotalGamesPlayed(statistics, output);
-                }
 
-                if (command.compareTo("getPlayerOneWins") == 0) {
-                    getPlayerOneWins(statistics, output);
-                }
+                } else if (command.compareTo("getPlayerOneWins") == 0) {
+                    getPlayerWins(1, statistics, output);
 
-                if (command.compareTo("getPlayerTwoWins") == 0) {
-                    getPlayerTwoWins(statistics, output);
+                } else if (command.compareTo("getPlayerTwoWins") == 0) {
+                    getPlayerWins(2, statistics, output);
                 }
             }
         }
 
     }
 
-    public void getPlayerDeck(InputData inputData, GameInputData game, ActionsInputData action, ArrayNode output) {
-        // am nevoie de playerIdx care se gaseste la actions
-        // "playerOneDeckIdx": 0
-        // lista deck uri pt acel jucator
+    /**
+     * Display the deck the player is playing with
+     * @param inputData information for all the games
+     * @param game information for the game
+     * @param action contains all the commands for the game
+     * @param output the final output in which it is written
+     */
+    public void getPlayerDeck(final InputData inputData, final GameInputData game,
+                              final ActionsInputData action, final ArrayNode output) {
 
-        // scot pachetele
+        /* Find the deck for the player given as an argument */
+        ArrayList<ArrayList<CardInputData>> decks = inputData.getPlayerOneDecks().getDecks();
+        int playerDeckIdx = game.getStartGame().getPlayerOneDeckIdx();
 
-        int playerIdx = action.getPlayerIdx();
-        ArrayList<ArrayList<CardInputData>> decks;
-        int playerDeckIdx;
-
-        if (playerIdx == 1) {
-            decks = inputData.getPlayerOneDecks().getDecks();
-            playerDeckIdx = game.getStartGame().getPlayerOneDeckIdx();
-
-            DisplayDeck displayGetPlayerDeck = new DisplayDeck();
-            displayGetPlayerDeck.displayDeck(decks.get(playerDeckIdx), playerIdx, output, "getPlayerDeck");
-
-        } else if (playerIdx == 2) {
+        if (action.getPlayerIdx() == 2) {
             decks = inputData.getPlayerTwoDecks().getDecks();
             playerDeckIdx = game.getStartGame().getPlayerTwoDeckIdx();
-            DisplayDeck displayGetPlayerDeck = new DisplayDeck();
-            displayGetPlayerDeck.displayDeck(decks.get(playerDeckIdx), playerIdx, output, "getPlayerDeck");
         }
+
+        Display displayGetPlayerDeck = new Display();
+        displayGetPlayerDeck.displayDeck(decks.get(playerDeckIdx), action.getPlayerIdx(), output,
+                                "getPlayerDeck");
     }
 
-    public void getPlayerHero(GameInputData game, ActionsInputData action, ArrayNode output) {
-        int playerIdx = action.getPlayerIdx();
+    /**
+     * Display the hero of the player
+     * @param game information for the game
+     * @param action contains all the commands for the game
+     * @param output the final output in which it is written
+     */
+    public void getPlayerHero(final GameInputData game, final ActionsInputData action,
+                              final ArrayNode output) {
 
-        CardInputData hero;
-        if (playerIdx == 1) {
-            hero = game.getStartGame().getPlayerOneHero();
-            DisplayGetPlayerHero displayGetPlayerHero = new DisplayGetPlayerHero();
-            displayGetPlayerHero.displayGetPlayerHero(hero, playerIdx, output);
+        /* Extract the hero for the player given as an argument */
+        CardInputData hero = game.getStartGame().getPlayerOneHero();
 
-        } else if (playerIdx == 2) {
+        if (action.getPlayerIdx() == 2) {
             hero = game.getStartGame().getPlayerTwoHero();
-            DisplayGetPlayerHero displayGetPlayerHero = new DisplayGetPlayerHero();
-            displayGetPlayerHero.displayGetPlayerHero(hero, playerIdx, output);
         }
+
+        Display displayGetPlayerHero = new Display();
+        displayGetPlayerHero.displayGetPlayerHero(hero, action.getPlayerIdx(), output);
 
     }
 
-    public void getPlayerTurn(Game currentGame, ArrayNode output) {
-        int playerTurn;
-//        playerTurn = game.getStartGame().getStartingPlayer();
-        playerTurn = currentGame.getCurrentPlayer();
+    /**
+     *
+     * @param currentGame additional information about the current game as table, current player
+     * @param output the final output in which it is written
+     */
+    public void getPlayerTurn(final Game currentGame, final ArrayNode output) {
 
-        DisplayGetPlayerTurn displayGetPlayerTurn = new DisplayGetPlayerTurn();
+        int playerTurn = currentGame.getCurrentPlayer();
+
+        Display displayGetPlayerTurn = new Display();
         displayGetPlayerTurn.displayGetPlayerTurn(playerTurn, output);
     }
 
-    public void endPlayerTurn(Game currentGame, Player player1, Player player2,  ArrayList<CardInputData> playerOneDeck, ArrayList<CardInputData> playerTwoDeck,
-                              CardInputData playerOneHero, CardInputData playerTwoHero) {
-        currentGame.increaseTour();
-        if (currentGame.getTour() % 2 == 1) {
+    /**
+     * End the current turn and change the necessary information
+     * @param currentGame additional information about the current game as table, current player
+     * @param player1 information about player1
+     * @param player2 information about player2
+     * @param playerOneDeck the first player's deck
+     * @param playerTwoDeck the second player's deck
+     * @param playerOneHero the first player's hero
+     * @param playerTwoHero the second player's hero
+     */
+    public void endPlayerTurn(final Game currentGame, final Player player1, final Player player2,
+                              final ArrayList<CardInputData> playerOneDeck,
+                              final ArrayList<CardInputData> playerTwoDeck,
+                              final CardInputData playerOneHero,
+                              final CardInputData playerTwoHero) {
+
+        /* Increase the turn */
+        currentGame.increaseTurn();
+
+        /* Check if the two turns have ended */
+        if (currentGame.getTurn() % 2 == 1) {
+
+            /* Increase the round */
             currentGame.increaseRound();
 
+            /* Increase mana to each player */
             player1.changeManaPlayer(currentGame.getRound());
             player2.changeManaPlayer(currentGame.getRound());
 
-            if (playerOneDeck.size() > 0)
+            /* Delete the first card in the range and put it in hand */
+            if (playerOneDeck.size() > 0) {
                 player1.getHand().add(playerOneDeck.remove(0));
-            if (playerTwoDeck.size() > 0)
+            }
+
+            if (playerTwoDeck.size() > 0) {
                 player2.getHand().add(playerTwoDeck.remove(0));
+            }
         }
 
-        ArrayList<ArrayList<CardInputData>> table = currentGame.getTable();
-
-        if (currentGame.getCurrentPlayer() == 1) {
-            // sctoate frozen din carti
-            // randurile 2 si 3
-            for (int i = 2; i < 4; i++) {
-                ArrayList<CardInputData> row = table.get(i);
-                for (CardInputData card : row) {
-                    card.setFrozen(0);
-                    card.setAttack(0);
-                    playerOneHero.setAttack(0);
-                }
-            }
-            currentGame.changePlayer(2);
-        } else {
-            for (int i = 0; i < 2; i++) {
-                ArrayList<CardInputData> row = table.get(i);
-                for (CardInputData card : row) {
-                    card.setFrozen(0);
-                    card.setAttack(0);
-                    playerTwoHero.setAttack(0);
-                }
-            }
-            currentGame.changePlayer(1);
+        CardInputData hero = playerOneHero;
+        if (currentGame.getCurrentPlayer() == 2) {
+            hero = playerTwoHero;
         }
 
-        //todo la finalul turei unui jucator cartile frozen sunt demarcate, precum si cartile care au atacat deja in tura
+        /* Unset freeze and attack for cards */
+        Settings settings = new Settings();
+        settings.initializingChangeTurn(currentGame, hero);
     }
 
-    public void getCardsInHand(int playerIdx, Player player1, Player player2, ArrayNode output) {
+    /**
+     * Display the cards from the player's hand
+     * @param playerIdx index of the player for whom I want to apply the actions
+     * @param player1 information about player1
+     * @param player2 information about player2
+     * @param output the final output in which it is written
+     */
+    public void getCardsInHand(final int playerIdx, final Player player1,
+                               final Player player2, final ArrayNode output) {
 
+        Display displayGetPlayerDeck = new Display();
         if (playerIdx == 1) {
-            DisplayDeck displayGetPlayerDeck = new DisplayDeck();
-            displayGetPlayerDeck.displayDeck(player1.getHand(), playerIdx, output, "getCardsInHand");
+            displayGetPlayerDeck.displayDeck(player1.getHand(), playerIdx, output,
+                                    "getCardsInHand");
+
         } else {
-            DisplayDeck displayGetPlayerDeck = new DisplayDeck();
-            displayGetPlayerDeck.displayDeck(player2.getHand(), playerIdx, output, "getCardsInHand");
+            displayGetPlayerDeck.displayDeck(player2.getHand(), playerIdx, output,
+                                   "getCardsInHand");
         }
     }
 
-    public void placeCard(Game currentGame, int handIdx, Player player1, Player player2, ArrayNode output) {
+    /**
+     * Put a card from hand on the table depending on the specifications of each one
+     * @param currentGame additional information about the current game as table, current player
+     * @param handIdx index of the card in hand
+     * @param player1 information about player1
+     * @param player2 information about player2
+     * @param output the final output in which it is written
+     */
+    public void placeCard(final Game currentGame, final int handIdx, final Player player1,
+                          final Player player2, final ArrayNode output) {
 
-        Environment environment = new Environment();
         Minion minion = new Minion();
 
         Player player = player1;
@@ -269,87 +302,54 @@ public class SolveCommands {
             player = player2;
         }
 
-        // scoate cartea de la pozitia handIdx din mana
+        /* Take the card from handIdx position out of hand */
         ArrayList<CardInputData> hand = player.getHand();
 
         if (hand.size() > 0 && handIdx < hand.size()) {
-            CardInputData card = hand.get(handIdx);
-            boolean done = false;
 
-            // scot tabla de jos
+            CardInputData card = hand.get(handIdx);
             ArrayList<ArrayList<CardInputData>> table = currentGame.getTable();
 
-
-            // verifica daca cartea este de tipul environment
-            if (environment.getEnvironmentCards().contains(card.getName())) {
-                DisplayError displayError = new DisplayError();
-                displayError.displayErrorPlaceCard(output, "Cannot place environment card on table.");
-                done = true;
-
-            }
-            if (!done && card.getMana() > player.getMana()) {  // verifica daca cartea are costul mai mic decat mana jucatorului
-
-                DisplayError displayError = new DisplayError();
-                displayError.displayErrorPlaceCard(output, "Not enough mana to place card on table.");
-                done = true;
-
+            VerifyErrors verifyErrors = new VerifyErrors();
+            int done = verifyErrors.errorsPlaceCard(currentGame, player, card, output);
+            if (done == 1) {
+                return;
             }
 
-            if (!done && player == player1) {      // se verifica daca randul pe care trebuie plasata cartea este plin
-
-                if ((minion.getBackCards().contains(card.getName()) && table.get(3).size() == 5) ||
-                        (minion.getFrontCards().contains(card.getName()) && table.get(2).size() == 5)) {
-
-                    DisplayError displayError = new DisplayError();
-                    displayError.displayErrorPlaceCard(output, "Cannot place card on table since row is full.");
-                    done = true;
+            /* Place the card on the table */
+            ArrayList<CardInputData> row;
+            if (player == player1) {
+                row = table.get(FIRST_ROW_PLAYER1);
+                if (minion.getBackCards().contains(card.getName())) {
+                    row = table.get(FIRST_ROW_PLAYER1 + 1);
                 }
-            }
-            if (!done && player == player2) {
-                if ((minion.getBackCards().contains(card.getName()) && table.get(0).size() == 5) ||
-                        (minion.getFrontCards().contains(card.getName()) && table.get(1).size() == 5)) {
-                    DisplayError displayError = new DisplayError();
-                    displayError.displayErrorPlaceCard(output, "Cannot place card on table since row is full.");
-                    done = true;
+            } else {
+                row = table.get(FIRST_ROW_PLAYER2 + 1);
+                if (minion.getBackCards().contains(card.getName())) {
+                    row = table.get(FIRST_ROW_PLAYER2);
                 }
             }
 
-            // altfel plaseaza cartea
-            //PLACE CARD PROPRIU-ZIS
-            // STERG CARTEA DIN HAND-UL playerului si o pun pe randul potrivit
-            if (!done) {
-                if (player == player1) {
-                    if (minion.getBackCards().contains(card.getName())) {
-                        ArrayList<CardInputData> row = table.get(3);
-                        row.add(hand.remove(handIdx));
-                    } else {
-                        ArrayList<CardInputData> row = table.get(2);
-                        row.add(hand.remove(handIdx));
-                    }
-                    player1.changeManaPlayer(-card.getMana());
-
-                } else {
-                    if (minion.getBackCards().contains(card.getName())) {
-                        ArrayList<CardInputData> row = table.get(0);
-                        row.add(hand.remove(handIdx));
-                    } else {
-                        ArrayList<CardInputData> row = table.get(1);
-                        row.add(hand.remove(handIdx));
-                    }
-                    player2.changeManaPlayer(-card.getMana());
-                }
-            }
+            row.add(hand.remove(handIdx));
+            player.changeManaPlayer(-card.getMana());
         }
-
-
     }
 
-    public void getPlayerMana(int playerIdx, Player player1, Player player2, ArrayNode output) {
-        int playerMana = player1.getMana();
+    /**
+     * Display the mana of the player
+     * @param playerIdx index of the player for whom I want to apply the actions
+     * @param player1 information about player1
+     * @param player2 information about player2
+     * @param output the final output in which it is written
+     */
+    public void getPlayerMana(final int playerIdx, final Player player1,
+                              final Player player2, final ArrayNode output) {
 
+        int playerMana = player1.getMana();
         if (playerIdx == 2) {
             playerMana = player2.getMana();
         }
+
         ObjectMapper mapper = new ObjectMapper();
         ObjectNode outputCommand = mapper.createObjectNode();
 
@@ -360,15 +360,20 @@ public class SolveCommands {
         output.add(outputCommand);
     }
 
-    public void getCardsOnTable(Game currentGame, ArrayNode output) {
-
-        ArrayList<ArrayList<CardInputData>> table = currentGame.getTable();
+    /**
+     * Display all the cards from the table
+     * @param currentGame additional information about the current game as table, current player
+     * @param output the final output in which it is written
+     */
+    public void getCardsOnTable(final Game currentGame, final ArrayNode output) {
 
         ObjectMapper mapper = new ObjectMapper();
+        /* Creates an ArrayNode to which I add all the cards on the table */
         ArrayNode cardsOnTable = mapper.createArrayNode();
 
-        for (int i = 0; i < 4; i++) {
-            ArrayList<CardInputData> row = table.get(i);
+        /* Go through all the rows on the table */
+        for (int i = 0; i < MAX_NUMBER_ROWS; i++) {
+            ArrayList<CardInputData> row = currentGame.getTable().get(i);
 
             FormDeck formDeck = new FormDeck();
             ArrayNode rowFormed  = formDeck.addDeckInOutput(row);
@@ -381,30 +386,37 @@ public class SolveCommands {
         outputCommand.put("command", "getCardsOnTable");
         outputCommand.set("output", cardsOnTable);
 
+        /* Add all to the final output */
         output.add(outputCommand);
     }
 
-    public void getEnvironmentCardsInHand(int playerIdx, Player player1, Player player2, ArrayNode output) {
+    /**
+     * Display the environment cards from the player's hand
+     * @param playerIdx index of the player for whom I want to apply the actions
+     * @param player1 information about player1
+     * @param player2 information about player2
+     * @param output the final output in which it is written
+     */
+    public void getEnvironmentCardsInHand(final int playerIdx, final Player player1,
+                                          final Player player2, final ArrayNode output) {
 
         Player player = player1;
+
         if (playerIdx == 2) {
             player = player2;
         }
 
-        ArrayList<CardInputData> hand = player.getHand();
-
         Environment environment = new Environment();
-
 
         ObjectMapper mapper = new ObjectMapper();
         ArrayNode environmentCards = mapper.createArrayNode();
 
-        for (CardInputData card : hand) {
-
+        /* Go through all the cards in hand and format the environment one */
+        for (CardInputData card : player.getHand()) {
             if (environment.getEnvironmentCards().contains(card.getName())) {
                 FormCard displayCard = new FormCard();
                 ObjectNode environmentCard = displayCard.addCardInOutput(card);
-
+                /* Add the card to the ArrayNode */
                 environmentCards.add(environmentCard);
             }
         }
@@ -415,10 +427,19 @@ public class SolveCommands {
         outputCommand.put("playerIdx", playerIdx);
         outputCommand.set("output", environmentCards);
 
+        /* Add all to the final output */
         output.add(outputCommand);
     }
 
-    public void getCardAtPosition(Game currentGame, int x, int y, ArrayNode output) {
+    /**
+     * Display the card for the given position in table
+     * @param currentGame additional information about the current game as table, current player
+     * @param x row for the card
+     * @param y column for the card
+     * @param output the final output in which it is written
+     */
+    public void getCardAtPosition(final Game currentGame, final int x, final int y,
+                                  final ArrayNode output) {
 
         ObjectMapper mapper = new ObjectMapper();
         ObjectNode outputCommand = mapper.createObjectNode();
@@ -427,9 +448,7 @@ public class SolveCommands {
         outputCommand.put("x", x);
         outputCommand.put("y", y);
 
-        ArrayList<ArrayList<CardInputData>> table = currentGame.getTable();
-
-        ArrayList<CardInputData> row = table.get(x);
+        ArrayList<CardInputData> row = currentGame.getTable().get(x);
 
         if (y >= row.size()) {
             outputCommand.put("output", "No card available at that position.");
@@ -437,126 +456,75 @@ public class SolveCommands {
         } else {
             FormCard displayCard = new FormCard();
             ObjectNode card = displayCard.addCardInOutput(row.get(y));
-
             outputCommand.set("output", card);
         }
 
         output.add(outputCommand);
     }
 
-    public void useEnvironmentCard(Game currentGame, Player player1, Player player2, int handIdx, int affectedRow, ArrayNode output) {
+    /**
+     * Apply one of the environment cards from hand on a row
+     * @param currentGame additional information about the current game as table, current player
+     * @param player1 information about player1
+     * @param player2 information about player2
+     * @param handIdx index of the environment card in hand
+     * @param affectedRow row that receives the changes
+     * @param output the final output in which it is written
+     */
+    public void useEnvironmentCard(final Game currentGame, final Player player1,
+                                   final Player player2, final int handIdx,
+                                   final int affectedRow, final ArrayNode output) {
 
-        ArrayList<ArrayList<CardInputData>> table = currentGame.getTable();
         Player player = player1;
         if (currentGame.getCurrentPlayer() == 2) {
             player = player2;
         }
 
-        ArrayList<CardInputData> hand = player.getHand();
+        ArrayList<ArrayList<CardInputData>> table = currentGame.getTable();
+        CardInputData card = player.getHand().get(handIdx);
+        VerifyErrors verifyErrors = new VerifyErrors();
 
-        CardInputData card = hand.get(handIdx);
+        int done = verifyErrors.errorsUseEnvironmentCard(currentGame, player, card, handIdx,
+                affectedRow, output);
+        if (done == 1) {
+            return;
+        }
 
         Environment environment = new Environment();
-        boolean done = false;
 
-        if (!environment.getEnvironmentCards().contains(card.getName())) {  // daca indexul ales NU corespunde unei cărți de tipul environment în lista de cărți din mână,
-            DisplayError displayError = new DisplayError();
-            displayError.displayErrorUseEnvironmentCard(output, handIdx, affectedRow, "Chosen card is not of type environment.");
-            done = true;
+        if (card.getName().compareTo("Firestorm") == 0) {
+            environment.applyFirestorm(table, affectedRow);
+
+        } else if (card.getName().compareTo("Winterfell") == 0) {
+            environment.applyWinterfell(table, affectedRow);
+
+        } else if (card.getName().compareTo("Heart Hound") == 0) {
+            environment.applyHeartHound(table, affectedRow);
         }
 
-        if (!done && card.getMana() > player.getMana()) {
-            DisplayError displayError = new DisplayError();
-            displayError.displayErrorUseEnvironmentCard(output, handIdx, affectedRow, "Not enough mana to use environment card.");
-            done = true;
-        }
-
-        // pot combina if-urile acestea doua intr-unul singur
-        if (!done && player == player1) {
-            if (affectedRow == 2 || affectedRow == 3) {
-                DisplayError displayError = new DisplayError();
-                displayError.displayErrorUseEnvironmentCard(output, handIdx, affectedRow, "Chosen row does not belong to the enemy.");
-                done = true;
-            }
-        }
-
-        if (!done && player == player2) {
-            if (affectedRow == 0 || affectedRow == 1) {
-                DisplayError displayError = new DisplayError();
-                displayError.displayErrorUseEnvironmentCard(output, handIdx, affectedRow, "Chosen row does not belong to the enemy.");
-                done = true;
-            }
-        }
-
-        if (!done && card.getName().compareTo("Heart Hound") == 0) {  // verific daca am unde sa pun jucatorul furat
-            int myRow = 3 - affectedRow;
-            if (table.get(myRow).size() == 5) {
-                DisplayError displayError = new DisplayError();
-                displayError.displayErrorUseEnvironmentCard(output, handIdx, affectedRow, "Cannot steal enemy card since the player's row is full.");
-                done = true;
-            }
-        }
-
-        //TODO verificare Heart hound
-        if (!done) {
-            ArrayList<CardInputData> row = table.get(affectedRow);
-            if (card.getName().compareTo("Firestorm") == 0) { // scade cu 1 viata tuturor minionilor de pe rand
-                //todo
-
-                for (int i = 0; i < row.size(); i++) {
-                    CardInputData minionCard = row.get(i);
-                    int health = minionCard.getHealth();
-                    minionCard.setHealth(health - 1);
-                    // verificare daca cartea nu mai are viata =>>>> sterge cartea din row
-                    if (minionCard.getHealth() == 0) {
-                        row.remove(i);
-                        i--;
-                    }
-                }
-
-            } else if (card.getName().compareTo("Winterfell") == 0) { // Toate cărțile de pe rând stau o tură.
-                //todo
-                for (int i = 0; i < row.size(); i++) {
-                    CardInputData minionCard = row.get(i);
-                    minionCard.setFrozen(1);
-                }
-
-            } else if (card.getName().compareTo("Heart Hound") == 0) { // Se fură minionul adversarului cu cea mai mare viață de pe rând și se pune pe rândul “oglindit” aferent jucătorului.
-                //todo
-
-                // scot minionul cu cea mai mare viata si il adaug in randul meu
-                int position = 0;
-                int maxHealth = Integer.MIN_VALUE;
-                for (int i = 0; i < row.size(); i++) {
-                    if (maxHealth < row.get(i).getHealth()) {
-                        maxHealth = row.get(i).getHealth();
-                        position = i;
-                    }
-                }
-                int myRow = 3 - affectedRow;
-                table.get(myRow).add(row.remove(position));
-            }
-
-            // sterge card din mana
-            player.changeManaPlayer(-hand.get(handIdx).getMana());
-            hand.remove(handIdx);
-
-        }
-
+        /* Modify the player's mana */
+        player.changeManaPlayer(-player.getHand().get(handIdx).getMana());
+        /* Remove the environment card from the hand */
+        player.getHand().remove(handIdx);
     }
 
-    public void getFrozenCardsOnTable(Game currentGame, ArrayNode output) {
+    /**
+     * Display frozen card on the table
+     * @param currentGame additional information about the current game as table, current player
+     * @param output the final output in which it is written
+     */
+    public void getFrozenCardsOnTable(final Game currentGame, final ArrayNode output) {
 
         ObjectMapper mapper = new ObjectMapper();
         ArrayNode cardArray = mapper.createArrayNode();
 
-        ArrayList<ArrayList<CardInputData>> table = currentGame.getTable();
-        for (ArrayList<CardInputData> row : table) {
+        /* Go through the cards on the table */
+        for (ArrayList<CardInputData> row : currentGame.getTable()) {
             for (CardInputData card : row) {
-
+                /* Find the frozen cards and add them to the ArrayNode */
                 if (card.getFrozen() == 1) {
                     FormCard displayCard = new FormCard();
-                    ObjectNode formedCard= displayCard.addCardInOutput(card);
+                    ObjectNode formedCard = displayCard.addCardInOutput(card);
 
                     cardArray.add(formedCard);
                 }
@@ -571,256 +539,127 @@ public class SolveCommands {
         output.add(outputCommand);
     }
 
-    public void cardUsesAttack(Game currentGame, ActionsInputData action, ArrayNode output) {
+    /**
+     * Attack the given card of the enemy
+     * @param currentGame additional information about the current game as table, current player
+     * @param action contains all the commands for the game
+     * @param output the final output in which it is written
+     */
+    public void cardUsesAttack(final Game currentGame, final ActionsInputData action,
+                               final ArrayNode output) {
 
-        CoordinatesData attackerCoordinates = action.getCardAttacker();
-        CoordinatesData attackedCoordinates = action.getCardAttacked();
+        /* Position of the attacker card on table */
+        int attackerX = action.getCardAttacker().getX();
+        int attackerY = action.getCardAttacker().getY();
 
-        int attackerX = attackerCoordinates.getX();
-        int attackerY = attackerCoordinates.getY();
+        /* Position of the attacked card on table */
+        int attackedX = action.getCardAttacked().getX();
+        int attackedY = action.getCardAttacked().getY();
 
-        int attackedX = attackedCoordinates.getX();
-        int attackedY = attackedCoordinates.getY();
-
-
-        boolean done = false;
-
-        if (currentGame.getCurrentPlayer() == 1) {
-            if (attackerX >= 2 && attackedX >= 2) {
-                DisplayError displayError = new DisplayError();
-                displayError.displayErrorcardUsesAttack(output, attackerCoordinates, attackedCoordinates, "Attacked card does not belong to the enemy.");
-                done = true;
-            }
-        }
-
-        if (currentGame.getCurrentPlayer() == 2) {
-            if (attackerX <= 1 && attackedX <= 1) {
-                DisplayError displayError = new DisplayError();
-                displayError.displayErrorcardUsesAttack(output, attackerCoordinates, attackedCoordinates, "Attacked card does not belong to the enemy.");
-                done = true;
-            }
-        }
-
-        ArrayList<ArrayList<CardInputData>> table = currentGame.getTable();
-        if ((attackerX < table.size() && attackedX < table.size()) &&
-                (attackerY < table.get(attackerX).size() && attackedY < table.get(attackedX).size())) {
-
-            CardInputData attackerCard = table.get(attackerX).get(attackerY);
-            CardInputData attackedCard = table.get(attackedX).get(attackedY);
-
-            if (!done && attackerCard.getAttack() == 1) { // daca cartea deja a atatacat in tura curenta
-                DisplayError displayError = new DisplayError();
-                displayError.displayErrorcardUsesAttack(output, attackerCoordinates, attackedCoordinates, "Attacker card has already attacked this turn.");
-                done = true;
-            }
-
-            if (!done && attackerCard.getFrozen() == 1) { // daca cartea este frozen
-                DisplayError displayError = new DisplayError();
-                displayError.displayErrorcardUsesAttack(output, attackerCoordinates, attackedCoordinates, "Attacker card is frozen.");
-                done = true;
-            }
-
-            // cautam daca pa randurile adversarului se gaseste o carte Tank si daca cartea aleasa nu este Tank
-            Minion minionCards = new Minion();
-            ArrayList<String> tankCards = minionCards.getTankCards();
-
-            if (!tankCards.contains(attackedCard.getName())) { // am verificat ca aceea carte nu este tank
-                // verific daca exista carti tank, si daca da afisez eroare
-
-                if (!done && currentGame.getCurrentPlayer() == 1) {
-                    for (int i = 0; i < 2; i++) {
-                        ArrayList<CardInputData> row = table.get(i);
-                        for (CardInputData card : row) {
-                            if (tankCards.contains(card.getName())) {
-                                DisplayError displayError = new DisplayError();
-                                displayError.displayErrorcardUsesAttack(output, attackerCoordinates, attackedCoordinates, "Attacked card is not of type 'Tank'.");
-                                done = true;
-                                break;
-                            }
-                        }
-                    }
-                }
-
-                if (!done && currentGame.getCurrentPlayer() == 2) {
-                    for (int i = 2; i < 4; i++) {
-                        ArrayList<CardInputData> row = table.get(i);
-                        for (CardInputData card : row) {
-                            if (tankCards.contains(card.getName())) {
-                                DisplayError displayError = new DisplayError();
-                                displayError.displayErrorcardUsesAttack(output, attackerCoordinates, attackedCoordinates, "Attacked card is not of type 'Tank'.");
-                                done = true;
-                                break;
-                            }
-                        }
-                    }
-                }
-            }
-
-            // fac atacul propriu zis
-            if (!done) {
-                int health = attackedCard.getHealth();
-                int attackDamage = attackerCard.getAttackDamage();
-                attackedCard.setHealth(health - attackDamage);
-
-                if (attackedCard.getHealth() <= 0) {
-                    ArrayList<CardInputData> row = table.get(attackedX);
-                    row.remove(attackedY);
-                }
-
-                attackerCard.setAttack(1);
-            }
-        }
-
-
-    }
-
-    public void cardUsesAbility(Game currentGame, ActionsInputData action, ArrayNode output) {
-
-        CoordinatesData attackerCoordinates = action.getCardAttacker();
-        CoordinatesData attackedCoordinates = action.getCardAttacked();
-
-        int attackerX = attackerCoordinates.getX();
-        int attackerY = attackerCoordinates.getY();
-
-        int attackedX = attackedCoordinates.getX();
-        int attackedY = attackedCoordinates.getY();
-
-        boolean done = false;
+        VerifyErrors verifyErrors = new VerifyErrors();
 
         ArrayList<ArrayList<CardInputData>> table = currentGame.getTable();
 
-        if ((attackerX < table.size() && attackedX < table.size()) &&
-                (attackerY < table.get(attackerX).size() && attackedY < table.get(attackedX).size())) {
+        /* First check if the positions are appropriate for the dimension of the table */
+        if ((attackerX < table.size() && attackedX < table.size())
+                && (attackerY < table.get(attackerX).size()
+                && attackedY < table.get(attackedX).size())) {
 
+            /* Find the attacker and attacked card on the table */
             CardInputData attackerCard = table.get(attackerX).get(attackerY);
             CardInputData attackedCard = table.get(attackedX).get(attackedY);
 
-            if (!done && attackerCard.getFrozen() == 1) { // daca cartea este frozen
-                DisplayError displayError = new DisplayError();
-                displayError.displayErrorcardUsesAbility(output, attackerCoordinates, attackedCoordinates, "Attacker card is frozen.");
-                done = true;
+            int done = verifyErrors.errorsCardUsesAttack(currentGame, attackerCard, attackedCard,
+                    action.getCardAttacker(), action.getCardAttacked(), output);
+            if (done == 1) {
+                return;
             }
 
-            if (!done && attackerCard.getAttack() == 1) { // daca cartea deja a atatacat in tura curenta
-                DisplayError displayError = new DisplayError();
-                displayError.displayErrorcardUsesAbility(output, attackerCoordinates, attackedCoordinates, "Attacker card has already attacked this turn.");
-                done = true;
+            /* The attack */
+            int health = attackedCard.getHealth();
+            int attackDamage = attackerCard.getAttackDamage();
+            attackedCard.setHealth(health - attackDamage);
+
+            if (attackedCard.getHealth() <= 0) {
+                table.get(attackedX).remove(attackedY);
             }
 
-            if (!done && attackerCard.getName().compareTo("Disciple") == 0) {
-                if (currentGame.getCurrentPlayer() == 1) {
-                    if (!(attackerX >= 2 && attackedX >= 2)) {
-                        DisplayError displayError = new DisplayError();
-                        displayError.displayErrorcardUsesAbility(output, attackerCoordinates, attackedCoordinates, "Attacked card does not belong to the current player.");
-                        done = true;
-                    }
-                }
-                if (currentGame.getCurrentPlayer() == 2) {
-                    if (!(attackerX <= 1 && attackedX <= 1)) {
-                        DisplayError displayError = new DisplayError();
-                        displayError.displayErrorcardUsesAbility(output, attackerCoordinates, attackedCoordinates, "Attacked card does not belong to the current player.");
-                        done = true;
-                    }
-                }
-            } else if (!done) {
-                if (currentGame.getCurrentPlayer() == 1) {
-                    if (attackerX >= 2 && attackedX >= 2) {
-                        DisplayError displayError = new DisplayError();
-                        displayError.displayErrorcardUsesAbility(output, attackerCoordinates, attackedCoordinates, "Attacked card does not belong to the enemy.");
-                        done = true;
-                    }
-                }
-
-                if (currentGame.getCurrentPlayer() == 2) {
-                    if (attackerX <= 1 && attackedX <= 1) {
-                        DisplayError displayError = new DisplayError();
-                        displayError.displayErrorcardUsesAbility(output, attackerCoordinates, attackedCoordinates, "Attacked card does not belong to the enemy.");
-                        done = true;
-                    }
-                }
-            }
-
-            Minion minionCards = new Minion();
-            ArrayList<String> tankCards = minionCards.getTankCards();
-
-            if (!done && !tankCards.contains(attackedCard.getName()) && attackerCard.getName().compareTo("Disciple") != 0) { // am verificat ca aceea carte nu este tank
-                // verific daca exista carti tank, si daca da afisez eroare
-
-                if (!done && currentGame.getCurrentPlayer() == 1) {
-                    for (int i = 0; i < 2; i++) {
-                        ArrayList<CardInputData> row = table.get(i);
-                        for (CardInputData card : row) {
-                            if (tankCards.contains(card.getName())) {
-                                DisplayError displayError = new DisplayError();
-                                displayError.displayErrorcardUsesAbility(output, attackerCoordinates, attackedCoordinates, "Attacked card is not of type 'Tank'.");
-                                done = true;
-                                break;
-                            }
-                        }
-                    }
-                }
-
-                if (!done && currentGame.getCurrentPlayer() == 2) {
-                    for (int i = 2; i < 4; i++) {
-                        ArrayList<CardInputData> row = table.get(i);
-                        for (CardInputData card : row) {
-                            if (tankCards.contains(card.getName())) {
-                                DisplayError displayError = new DisplayError();
-                                displayError.displayErrorcardUsesAbility(output, attackerCoordinates, attackedCoordinates, "Attacked card is not of type 'Tank'.");
-                                done = true;
-                                break;
-                            }
-                        }
-                    }
-                }
-            }
-
-            if (!done) {
-                if (attackerCard.getName().compareTo("The Ripper") == 0) {
-                    int attackDamage = attackedCard.getAttackDamage();
-                    attackedCard.setAttackDamage(attackDamage - 2);
-                    if (attackedCard.getAttackDamage() < 0) {
-                        attackedCard.setAttackDamage(0);
-                    }
-                }
-
-                if (attackerCard.getName().compareTo("Miraj") == 0) {
-                    int healthAttacker = attackerCard.getHealth();
-                    int healthAttacked = attackedCard.getHealth();
-                    attackerCard.setHealth(healthAttacked);
-                    attackedCard.setHealth(healthAttacker);
-                }
-
-                if (attackerCard.getName().compareTo("The Cursed One") == 0) {
-                    int healthAttacked = attackedCard.getHealth();
-                    int attackDamageAttacked = attackedCard.getAttackDamage();
-
-                    attackedCard.setHealth(attackDamageAttacked);
-                    attackedCard.setAttackDamage(healthAttacked);
-
-                    if (attackedCard.getHealth() <= 0) {
-                        table.get(attackedX).remove(attackedY);
-                    }
-                }
-
-                if (attackerCard.getName().compareTo("Disciple") == 0) {
-                    int healthAttacked = attackedCard.getHealth();
-                    attackedCard.setHealth(healthAttacked + 2);
-                }
-
-                attackerCard.setAttack(1);
-            }
+            /* The card already attacked this turn */
+            attackerCard.setAttack(1);
         }
     }
 
-    public void  useAttackHero(StartGameInputData startGameInputData, Game currentGame, ActionsInputData action, ArrayNode output, Statistics statistics) {
+    /**
+     * Apply the ability of the attacker card on the attacked card
+     * @param currentGame additional information about the current game as table, current player
+     * @param action contains all the commands for the game
+     * @param output the final output in which it is written
+     */
+    public void cardUsesAbility(final Game currentGame, final ActionsInputData action,
+                                final ArrayNode output) {
 
-        CoordinatesData attackerCoordinates = action.getCardAttacker();
+        /* Position of the attacker card on table */
+        int attackerX = action.getCardAttacker().getX();
+        int attackerY = action.getCardAttacker().getY();
 
-        int attackerX = attackerCoordinates.getX();
-        int attackerY = attackerCoordinates.getY();
+        /* Position of the attacked card on table */
+        int attackedX = action.getCardAttacked().getX();
+        int attackedY = action.getCardAttacked().getY();
 
-        boolean done = false;
+        ArrayList<ArrayList<CardInputData>> table = currentGame.getTable();
+
+        /* First check if the positions are appropriate for the dimension of the table */
+        if ((attackerX < table.size() && attackedX < table.size())
+                && (attackerY < table.get(attackerX).size()
+                && attackedY < table.get(attackedX).size())) {
+
+            /* Find the attacker and attacked card on the table */
+            CardInputData attackerCard = table.get(attackerX).get(attackerY);
+            CardInputData attackedCard = table.get(attackedX).get(attackedY);
+
+            VerifyErrors verifyErrors = new VerifyErrors();
+            int done = verifyErrors.errorsCardUsesAbility(currentGame, attackerCard,
+                    attackedCard, action.getCardAttacker(), action.getCardAttacked(), output);
+            if (done == 1) {
+                return;
+            }
+
+            Minion minion = new Minion();
+            /* Identify the special card and apply his ability */
+            if (attackerCard.getName().compareTo("The Ripper") == 0) {
+                minion.applyAbilityTheRipper(attackedCard);
+
+            } else if (attackerCard.getName().compareTo("Miraj") == 0) {
+                minion.applyAbilityMiraj(attackerCard, attackedCard);
+
+            } else if (attackerCard.getName().compareTo("The Cursed One") == 0) {
+                minion.applyAbilityTheCursedOne(currentGame, attackedCard, attackedX, attackedY);
+
+            } else if (attackerCard.getName().compareTo("Disciple") == 0) {
+                minion.applyDisciple(attackedCard);
+            }
+
+            /* The card already attacked this turn */
+            attackerCard.setAttack(1);
+        }
+    }
+
+    /**
+     * The attacker card attack the enemy's hero
+     * @param startGameInputData necessary information to start a new game
+     * @param currentGame additional information about the current game as table, current player
+     * @param action contains all the commands for the game
+     * @param output the final output in which it is written
+     * @param statistics contains the player1 and player2 wins and also tne number of all
+     *                  the games played
+     */
+    public void  useAttackHero(final StartGameInputData startGameInputData, final Game currentGame,
+                               final ActionsInputData action, final ArrayNode output,
+                               final Statistics statistics) {
+
+        /* Position of the attacker */
+        int attackerX = action.getCardAttacker().getX();
+        int attackerY = action.getCardAttacker().getY();
 
         ArrayList<ArrayList<CardInputData>> table = currentGame.getTable();
 
@@ -828,201 +667,86 @@ public class SolveCommands {
 
             CardInputData attackerCard = table.get(attackerX).get(attackerY);
 
-            if (!done && attackerCard.getFrozen() == 1) { // daca cartea este frozen
-                DisplayError displayError = new DisplayError();
-                displayError.displayErrorAttackHero(output, attackerCoordinates, "Attacker card is frozen.");
-                done = true;
+            VerifyErrors verifyErrors = new VerifyErrors();
+            int done = verifyErrors.errorsUseAttackHero(currentGame, attackerCard,
+                    action.getCardAttacker(), output);
+            if (done == 1) {
+                return;
             }
 
-            if (!done && attackerCard.getAttack() == 1) { // daca cartea deja a atatacat in tura curenta
-                DisplayError displayError = new DisplayError();
-                displayError.displayErrorAttackHero(output, attackerCoordinates, "Attacker card has already attacked this turn.");
-                done = true;
+            String message = "Player one killed the enemy hero.";
+            if (currentGame.getCurrentPlayer() == 2) {
+                message = "Player two killed the enemy hero.";
             }
 
-            Minion minionCards = new Minion();
-            ArrayList<String> tankCards = minionCards.getTankCards();
+            Hero hero = new Hero();
+            /* Attack the hero and eventually kill it */
+            hero.killHero(currentGame, startGameInputData, message, attackerCard, statistics,
+                    output);
 
-             // am verificat ca aceea carte nu este tank
-                // verific daca exista carti tank, si daca da afisez eroare
-
-            if (!done && currentGame.getCurrentPlayer() == 1) {
-                for (int i = 0; i < 2; i++) {
-                    ArrayList<CardInputData> row = table.get(i);
-                    for (CardInputData card : row) {
-                        if (tankCards.contains(card.getName())) {
-                            DisplayError displayError = new DisplayError();
-                            displayError.displayErrorAttackHero(output, attackerCoordinates, "Attacked card is not of type 'Tank'.");
-                            done = true;
-                            break;
-                        }
-                    }
-                }
-            }
-
-            if (!done && currentGame.getCurrentPlayer() == 2) {
-                for (int i = 2; i < 4; i++) {
-                    ArrayList<CardInputData> row = table.get(i);
-                    for (CardInputData card : row) {
-                        if (tankCards.contains(card.getName())) {
-                            DisplayError displayError = new DisplayError();
-                            displayError.displayErrorAttackHero(output, attackerCoordinates, "Attacked card is not of type 'Tank'.");
-                            done = true;
-                            break;
-                        }
-                    }
-                }
-            }
-
-            if (!done) {
-                if (currentGame.getCurrentPlayer() == 1) {
-                    CardInputData heroEnemy = startGameInputData.getPlayerTwoHero();
-                    int healthHero = heroEnemy.getHealth();
-                    int attackDamage = attackerCard.getAttackDamage();
-                    heroEnemy.setHealth(healthHero - attackDamage);
-
-                    if (heroEnemy.getHealth() <= 0) {
-                        ObjectMapper mapper = new ObjectMapper();
-                        ObjectNode outputCommand = mapper.createObjectNode();
-                        outputCommand.put("gameEnded", "Player one killed the enemy hero.");
-
-                        output.add(outputCommand);
-
-                        statistics.increasePlayerOneWins();
-                    }
-                } else {
-                    CardInputData heroEnemy = startGameInputData.getPlayerOneHero();
-                    int healthHero = heroEnemy.getHealth();
-                    int attackDamage = attackerCard.getAttackDamage();
-                    heroEnemy.setHealth(healthHero - attackDamage);
-
-                    if (heroEnemy.getHealth() <= 0) {
-                        ObjectMapper mapper = new ObjectMapper();
-                        ObjectNode outputCommand = mapper.createObjectNode();
-                        outputCommand.put("gameEnded", "Player two killed the enemy hero.");
-                        output.add(outputCommand);
-
-                        statistics.increasePlayerTwoWins();
-                    }
-                }
-
-                attackerCard.setAttack(1);
-            }
-
+            /* The card already attacked this turn */
+            attackerCard.setAttack(1);
         }
-
-
     }
 
-    public void useHeroAbility(StartGameInputData startGameInputData, Game currentGame, Player player1, Player player2, int affectedRow, ArrayNode output) {
+    /**
+     * The player's hero uses his ability on a row
+     * @param startGameInputData necessary information to start a new game
+     * @param currentGame additional information about the current game as table, current player
+     * @param player1 information about player1
+     * @param player2 information about player2
+     * @param affectedRow row that receives the changes
+     * @param output the final output in which it is written
+     */
+    public void useHeroAbility(final StartGameInputData startGameInputData, final Game currentGame,
+                               final Player player1, final Player player2, final int affectedRow,
+                               final ArrayNode output) {
 
         Player player = player1;
-        CardInputData hero = startGameInputData.getPlayerOneHero();
+        /* Find the current player's hero */
+        CardInputData heroCard = startGameInputData.getPlayerOneHero();
 
         if (currentGame.getCurrentPlayer() == 2) {
-            hero = startGameInputData.getPlayerTwoHero();
+            heroCard = startGameInputData.getPlayerTwoHero();
             player = player2;
         }
 
-        boolean done = false;
-        if (player.getMana() < hero.getMana()) {
-            DisplayError displayError = new DisplayError();
-            displayError.displayErrorUseAbilityHero(output, affectedRow, "Not enough mana to use hero's ability.");
-            done = true;
+        VerifyErrors verifyErrors = new VerifyErrors();
+        int done = verifyErrors.useHeroAbility(currentGame, player, heroCard, affectedRow, output);
+        if (done == 1) {
+            return;
         }
 
-        if (!done && hero.getAttack() == 1) { // daca cartea deja a atatacat in tura curenta
-            DisplayError displayError = new DisplayError();
-            displayError.displayErrorUseAbilityHero(output, affectedRow, "Hero has already attacked this turn.");
-            done = true;
+        ArrayList<CardInputData> row =  currentGame.getTable().get(affectedRow);
+
+        Hero hero = new Hero();
+        /* Identify the hero and apply his ability */
+        if (heroCard.getName().compareTo("Lord Royce") == 0) {
+            hero.applyAbilityLord(row);
+
+        } else if (heroCard.getName().compareTo("Empress Thorina") == 0) {
+            hero.applyAbilityThorina(row);
+
+        } else if (heroCard.getName().compareTo("King Mudface") == 0) {
+            hero.applyAbilityKing(row);
+
+        } else if (heroCard.getName().compareTo("General Kocioraw") == 0) {
+            hero.applyAbilityKocioraw(row);
         }
 
-        if (!done && (hero.getName().compareTo("Lord Royce") == 0 || hero.getName().compareTo("Empress Thorina") == 0)) {
-            if (player == player1) {
-                if (affectedRow >= 2) {
-                    DisplayError displayError = new DisplayError();
-                    displayError.displayErrorUseAbilityHero(output, affectedRow, "Selected row does not belong to the enemy.");
-                    done = true;
-                }
-            } else {
-                if (affectedRow <= 1) {
-                    DisplayError displayError = new DisplayError();
-                    displayError.displayErrorUseAbilityHero(output, affectedRow, "Selected row does not belong to the enemy.");
-                    done = true;
-                }
-            }
-        }
-
-        if (!done && (hero.getName().compareTo("General Kocioraw") == 0 || hero.getName().compareTo("King Mudface") == 0)) {
-            if (player == player1) {
-                if (affectedRow <= 1) {
-                    DisplayError displayError = new DisplayError();
-                    displayError.displayErrorUseAbilityHero(output, affectedRow, "Selected row does not belong to the current player.");
-                    done = true;
-                }
-            } else {
-                if (affectedRow >= 2) {
-                    DisplayError displayError = new DisplayError();
-                    displayError.displayErrorUseAbilityHero(output, affectedRow, "Selected row does not belong to the current player.");
-                    done = true;
-                }
-            }
-        }
-
-        ArrayList<ArrayList<CardInputData>> table = currentGame.getTable();
-        ArrayList<CardInputData> row = table.get(affectedRow);
-
-        if (!done) {
-            if (hero.getName().compareTo("Lord Royce") == 0) {  //  îngheață cartea cu cel mai mare atac de pe rând
-                int maxAttackDamage = Integer.MIN_VALUE;
-                int position = 0;
-                for (int i = 0; i < row.size(); i++) {
-                    CardInputData card = row.get(i);
-                    if (card.getAttackDamage() > maxAttackDamage) {
-                        maxAttackDamage = card.getAttackDamage();
-                        position = i;
-                    }
-                }
-                CardInputData card = row.get(position);
-                card.setFrozen(1);
-            }
-
-            if (hero.getName().compareTo("Empress Thorina") == 0) {  // distruge cartea cu cea mai mare viață de pe rând.
-                int maxHealth = Integer.MIN_VALUE;
-                int position = 0;
-                for (int i = 0; i < row.size(); i++) {
-                    CardInputData card = row.get(i);
-                    if (card.getHealth() > maxHealth) {
-                        maxHealth = card.getHealth();
-                        position = i;
-                    }
-                }
-
-                row.remove(position);
-            }
-
-            if (hero.getName().compareTo("King Mudface") == 0) { // +1 viață pentru toate cărțile de pe rând.
-                for (CardInputData card : row) {
-                    int health = card.getHealth();
-                    card.setHealth(health + 1);
-                }
-            }
-
-            if (hero.getName().compareTo("General Kocioraw") == 0) { // +1 atac pentru toate cărțile de pe rând.
-                for (CardInputData card : row) {
-                    int attackDamage = card.getAttackDamage();
-                    card.setAttackDamage(attackDamage + 1);
-                }
-            }
-
-            hero.setAttack(1);
-            int manaPlayer = player.getMana();
-            player.setMana(manaPlayer - hero.getMana());
-        }
-
+        heroCard.setAttack(1);
+        /* Decrease the player's mana by hero mana */
+        player.setMana(player.getMana() - heroCard.getMana());
     }
 
-    public void getTotalGamesPlayed(Statistics statistics, ArrayNode output) {
+    /**
+     * Display total games played so far
+     * @param statistics contains the player1 and player2 wins and also tne number of all
+     *                   the games played
+     * @param output the final output in which it is written
+     */
+    public void getTotalGamesPlayed(final Statistics statistics, final ArrayNode output) {
+
         ObjectMapper mapper = new ObjectMapper();
         ObjectNode outputCommand = mapper.createObjectNode();
 
@@ -1032,22 +756,26 @@ public class SolveCommands {
         output.add(outputCommand);
     }
 
-    public void getPlayerOneWins(Statistics statistics, ArrayNode output) {
+    /**
+     * Display the number of wined games for a player
+     * @param playerIdx the index of the player for which I want to display
+     * @param statistics contains the player1 and player2 wins and also tne number of all
+     *                 the games played
+     * @param output the final output in which it is written
+     */
+    public void getPlayerWins(final int playerIdx, final Statistics statistics,
+                              final ArrayNode output) {
+
         ObjectMapper mapper = new ObjectMapper();
         ObjectNode outputCommand = mapper.createObjectNode();
 
-        outputCommand.put("command", "getPlayerOneWins");
-        outputCommand.put("output", statistics.getPlayerOneWins());
-
-        output.add(outputCommand);
-    }
-
-    public void getPlayerTwoWins(Statistics statistics, ArrayNode output) {
-        ObjectMapper mapper = new ObjectMapper();
-        ObjectNode outputCommand = mapper.createObjectNode();
-
-        outputCommand.put("command", "getPlayerTwoWins");
-        outputCommand.put("output", statistics.getPlayerTwoWins());
+        if (playerIdx == 1) {
+            outputCommand.put("command", "getPlayerOneWins");
+            outputCommand.put("output", statistics.getPlayerOneWins());
+        } else {
+            outputCommand.put("command", "getPlayerTwoWins");
+            outputCommand.put("output", statistics.getPlayerTwoWins());
+        }
 
         output.add(outputCommand);
     }

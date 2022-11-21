@@ -10,9 +10,6 @@ import fileio.Input;
 import game.SolveCommands;
 import game.data.InputData;
 
-import java.util.*;
-
-
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -77,15 +74,8 @@ public final class Main {
         //TODO add here the entry point to your implementation
         InputData data = new InputData(inputData);
 
-//        System.out.println(filePath1 + " " + data.getPlayerOneDecks().getDecks().get(0).get(0).getName());
-//        if (filePath1.equals("test18_big_game.json")) {
-//            InputData data = new InputData(inputData);
-//            SolveCommands gata = new SolveCommands();
-//            gata.display(filePath1, data, output, inputData);
-//        }
-//
-            SolveCommands gata = new SolveCommands();
-        gata.display(filePath1, data, output, inputData);
+        SolveCommands playGame = new SolveCommands();
+        playGame.display(data, output, inputData);
 
 
         ObjectWriter objectWriter = objectMapper.writerWithDefaultPrettyPrinter();

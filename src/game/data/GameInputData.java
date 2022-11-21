@@ -5,6 +5,9 @@ import fileio.GameInput;
 
 import java.util.ArrayList;
 
+/**
+ * Contains the information for one game
+ */
 public class GameInputData {
     private StartGameInputData startGame;
     private ArrayList<ActionsInputData> actions = new ArrayList<>();
@@ -12,27 +15,44 @@ public class GameInputData {
     public GameInputData() {
 
     }
-    public GameInputData(GameInput game) {
+
+    /**
+     * Copy constructor
+     * @param game information about a game
+     */
+    public GameInputData(final GameInput game) {
         this.startGame = new StartGameInputData(game.getStartGame());
         for (ActionsInput action : game.getActions()) {
-            ActionsInputData action2 = new ActionsInputData((action));
-            this.actions.add(action2);
+            ActionsInputData newAction = new ActionsInputData((action));
+            this.actions.add(newAction);
         }
     }
 
+    /**
+     * @return startGame
+     */
     public StartGameInputData getStartGame() {
         return startGame;
     }
 
-    public void setStartGame(StartGameInputData startGame) {
+    /**
+     * @param startGame new value
+     */
+    public void setStartGame(final StartGameInputData startGame) {
         this.startGame = startGame;
     }
 
+    /**
+     * @return actions
+     */
     public ArrayList<ActionsInputData> getActions() {
         return actions;
     }
 
-    public void setActions(ArrayList<ActionsInputData> actions) {
+    /**
+     * @param actions new value
+     */
+    public void setActions(final ArrayList<ActionsInputData> actions) {
         this.actions = actions;
     }
 }

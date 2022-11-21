@@ -1,11 +1,16 @@
 package game.data;
 
 import fileio.CardInput;
-import game.card.hero.Hero;
+import game.card.Hero;
 
 import java.util.ArrayList;
 
+/**
+ * Contains the information for a card
+ */
 public class CardInputData {
+
+    public static final int HEALTH_HERO = 30;
     private int mana;
     private int attackDamage;
     private int health;
@@ -13,19 +18,24 @@ public class CardInputData {
     private ArrayList<String> colors =  new ArrayList<>();
     private String name;
 
-    private int frozen; // adaugat  vreau sa fie 0 daca cartea nu e frozen si 1 daca cartea e frozen
-    private int attack; // 0 initial, 1 cand deja a atacat in acea tura
+    private int frozen; /* 1 if the card is frozen, 0 else */
+    private int attack; /* 1 if the card already attacked on turn, 0 else */
 
     public CardInputData() {
 
     }
-    public CardInputData(CardInput card) {
+
+    /**
+     * Copy constructor
+     * @param card information for a card
+     */
+    public CardInputData(final CardInput card) {
         this.mana = card.getMana();
         this.attackDamage = card.getAttackDamage();
 
         Hero hero = new Hero();
         if (hero.getHeroCards().contains(card.getName())) {
-            this.health = 30;
+            this.health = HEALTH_HERO;
         } else {
             this.health = card.getHealth();
         }
@@ -36,67 +46,115 @@ public class CardInputData {
         attack = 0;
     }
 
+    /**
+     * @return mana
+     */
     public int getMana() {
         return mana;
     }
 
-    public void setMana(int mana) {
+    /**
+     * @param mana new value
+     */
+    public void setMana(final int mana) {
         this.mana = mana;
     }
 
+    /**
+     * @return attackDamage
+     */
     public int getAttackDamage() {
         return attackDamage;
     }
 
-    public void setAttackDamage(int attackDamage) {
+    /**
+     * @param attackDamage new value
+     */
+    public void setAttackDamage(final int attackDamage) {
         this.attackDamage = attackDamage;
     }
 
+    /**
+     * @return health
+     */
     public int getHealth() {
         return health;
     }
 
-    public void setHealth(int health) {
+    /**
+     * @param health new value
+     */
+    public void setHealth(final int health) {
         this.health = health;
     }
 
+    /**
+     * @return description
+     */
     public String getDescription() {
         return description;
     }
 
-    public void setDescription(String description) {
+    /**
+     * @param description new value
+     */
+    public void setDescription(final String description) {
         this.description = description;
     }
 
+    /**
+     * @return colors
+     */
     public ArrayList<String> getColors() {
         return colors;
     }
 
-    public void setColors(ArrayList<String> colors) {
+    /**
+     * @param colors new value
+     */
+    public void setColors(final ArrayList<String> colors) {
         this.colors = colors;
     }
 
+    /**
+     * @return name
+     */
     public String getName() {
         return name;
     }
 
-    public void setName(String name) {
+    /**
+     * @param name new value
+     */
+    public void setName(final String name) {
         this.name = name;
     }
 
+    /**
+     * @return frozen
+     */
     public int getFrozen() {
         return frozen;
     }
 
-    public void setFrozen(int frozen) {
+    /**
+     * @param frozen new value
+     */
+    public void setFrozen(final int frozen) {
         this.frozen = frozen;
     }
 
+    /**
+     * @return attack
+     */
     public int getAttack() {
         return attack;
     }
 
-    public void setAttack(int attack) {
+    /**
+     * @param attack new value
+     */
+    public void setAttack(final int attack) {
         this.attack = attack;
     }
 }

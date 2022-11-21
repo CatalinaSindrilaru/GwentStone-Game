@@ -1,32 +1,43 @@
 package game.gameStrategy;
 
-import fileio.CardInput;
 import game.data.CardInputData;
 
 import java.util.ArrayList;
 
+/**
+ * Class for a player that contains the hand and mana.
+ */
 public class Player {
 
     private ArrayList<CardInputData> hand = new ArrayList<>();
     private int mana;
 
+    /**
+     * Change the value of the player's mana
+     * @param value that decrease/increase actual mana
+     */
+    public void changeManaPlayer(final int value) {
+        mana += value;
+    }
+
+    /**
+     * @return hand
+     */
     public ArrayList<CardInputData> getHand() {
         return hand;
     }
 
-    public void setHand(ArrayList<CardInputData> hand) {
-        this.hand = hand;
-    }
-
-    public void changeManaPlayer(int value) {
-        mana += value;
-    }
-
+    /**
+     * @return mana
+     */
     public int getMana() {
         return mana;
     }
 
-    public void setMana(int mana) {
+    /**
+     * @param mana new value
+     */
+    public void setMana(final int mana) {
         this.mana = mana;
     }
 

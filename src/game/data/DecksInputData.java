@@ -5,6 +5,9 @@ import fileio.DecksInput;
 
 import java.util.ArrayList;
 
+/**
+ * Contains the decks for each player
+ */
 public class DecksInputData {
     private int nrCardsInDeck;
     private int nrDecks;
@@ -13,43 +16,66 @@ public class DecksInputData {
     public DecksInputData() {
 
     }
-    public DecksInputData(DecksInput decksInput) {
+
+    /**
+     * Copy constructor
+     * @param decksInput information about all the decks in game
+     */
+    public DecksInputData(final DecksInput decksInput) {
         this.nrCardsInDeck = decksInput.getNrCardsInDeck();
         this.nrDecks = decksInput.getNrDecks();
 
         for (ArrayList<CardInput> deck : decksInput.getDecks()) {
 
-            ArrayList<CardInputData> new_deck = new ArrayList<>();
+            ArrayList<CardInputData> newDeck = new ArrayList<>();
             for (CardInput card : deck) {
-                CardInputData new_card = new CardInputData(card);
-                new_deck.add(new_card);
+                CardInputData newCard = new CardInputData(card);
+                newDeck.add(newCard);
             }
 
-            this.decks.add(new_deck);
+            this.decks.add(newDeck);
         }
     }
 
+    /**
+     * @return nrCardsInDeck
+     */
     public int getNrCardsInDeck() {
         return nrCardsInDeck;
     }
 
-    public void setNrCardsInDeck(int nrCardsInDeck) {
+    /**
+     * @param nrCardsInDeck new value
+     */
+    public void setNrCardsInDeck(final int nrCardsInDeck) {
         this.nrCardsInDeck = nrCardsInDeck;
     }
 
+    /**
+     * @return nrDecks
+     */
     public int getNrDecks() {
         return nrDecks;
     }
 
-    public void setNrDecks(int nrDecks) {
+    /**
+     * @param nrDecks new value
+     */
+    public void setNrDecks(final int nrDecks) {
         this.nrDecks = nrDecks;
     }
 
+    /**
+     * @return decks
+     */
     public ArrayList<ArrayList<CardInputData>> getDecks() {
         return decks;
     }
 
-    public void setDecks(ArrayList<ArrayList<CardInputData>> decks) {
+    /**
+     * @param decks new value
+     */
+    public void setDecks(final ArrayList<ArrayList<CardInputData>> decks) {
         this.decks = decks;
     }
 }
